@@ -1,7 +1,4 @@
 #include<ImfRgbaFile.h>
-#include<ImfStringAttribute.h>
-#include<ImfMatrixAttribute.h>
-#include<ImfArray.h>
 #include<iostream>
 #include<cstdlib>
 #include<Magick++.h>
