@@ -1,0 +1,16 @@
+Antes de usar:
+instalar:
+	libmagick++-dev
+	libopenexr6
+	libopenexr-dev
+	opcional: qtpfsgui
+
+compilacion:
+	make
+
+correr:
+	make test
+	o
+	./tonemap imagen.exr
+
+se pueden generar los EXR con el qtpfsgui
