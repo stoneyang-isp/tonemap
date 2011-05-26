@@ -61,7 +61,7 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 	int i, j, ii, jj, k_center_row, k_center_col;
 	Matrix* C;
 	
-	C = NewMatrix(A->cols,A->rows);
+	C = NewMatrix(A->rows,A->cols);
 	k_center_row = kernel->rows/2;
 	k_center_col = kernel->cols/2;
 	
