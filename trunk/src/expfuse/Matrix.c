@@ -56,6 +56,47 @@ Matrix* Substract(const Matrix* A, const Matrix* B)
 	return C;
 }
 
+Matrix* Add(const Matrix* A, const Matrix* B)
+{
+	int i, j;
+	Matrix* C;
+	
+	if ( A->cols!=B->cols || A->rows!=B->rows )
+	{
+		printf("Error: Add - matrix sizes must match!\n");
+		exit(0);
+	}
+	
+	C = NewMatrix(A->rows,A->cols);
+	
+	forn(i,C->rows) forn(j,C->cols)
+	{
+		int n = i*C->cols + j;
+		C->data[n] = A->data[n] + B->data[n];
+	}
+	
+	return C;
+}
+
+Matrix* AddEqualsMatrix(Matrix* A, const Matrix* B)
+{
+	int i, j;
+	
+	if ( A->cols!=B->cols || A->rows!=B->rows )
+	{
+		printf("Error: AddEquals - matrix sizes must match!\n");
+		exit(0);
+	}
+	
+	forn(i,A->rows) forn(j,A->cols)
+	{
+		int n = i*A->cols + j;
+		A->data[n] += B->data[n];
+	}
+	
+	return A;
+}
+
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound)
 {
 	int i, j, ii, jj, k_center_row, k_center_col;
