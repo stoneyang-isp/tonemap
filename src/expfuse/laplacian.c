@@ -10,331 +10,447 @@
 #define WC = 1
 #define WS = 1
 #define WE = 1
+#define SAMPLES 4
 #define SIGMA2 .04 // representa SIGMA^2 cuando SIGMA = .2
 
-void SaveImgs(double* data, int width, int height, int samples, char* prefix);
-void SaveImg(double* data, int width, int height, int channels, char* name);
-void ShowImg(IplImage* img);
-void PrintM(double* data,int width,int height,int channels);
-void PrintA(unsigned char* data,int width,int step,int height,int channels);
-
-int main(int argc, char* argv[])
+typedef struct
 {
-	IplImage* img = 0;
-	int height,width,channels,step,depth,samples;
-	int i,j,k;
+	Matrix* R;
+	Matrix* G;
+	Matrix* B;
+} ColorImage;
 
-	if(argc<2){
-		printf("Usage: main <image-file-name>\n\7");
+ColorImage* LoadColorImage(const char* filename);
+void SaveColorImage(const ColorImage* I, const char* filename);
+Matrix* LoadGrayscaleImage(const char* filename);
+void SaveGrayscaleImage(const Matrix* I, const char* filename);
+Matrix* DesaturateImage(const ColorImage* I);
+Matrix* Contrast(const Matrix* I);
+Matrix* Saturation(const ColorImage* I);
+Matrix* Exposeness(const ColorImage* I);
+Matrix* Weight(const Matrix* contrast, const Matrix* saturation, const Matrix* exposeness);
+void NormalizeWeights(Matrix** weights, const int n_samples);
+ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples);
+Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels);
+Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels);
+Matrix* Downsample(const Matrix* I);
+Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
+
+int main()
+{
+/*
+	int i;
+	Matrix* I;
+	Matrix** gauss_pyramid;
+	Matrix** laplacian_pyramid;
+	
+	I = LoadGrayscaleImage("lena.png");
+	
+	int levels = (int)floor(log(min(I->rows,I->cols))/log(2));
+	
+	gauss_pyramid = GaussianPyramid(I,levels);
+	laplacian_pyramid = LaplacianPyramid(I,levels);
+	
+	forn(i,levels)
+	{
+		char name[20];
+		sprintf(name,"lena_gp_%d.jpg",i);
+		SaveGrayscaleImage(gauss_pyramid[i],name);
+		
+		sprintf(name,"lena_lp_%d.jpg",i);
+		SaveGrayscaleImage(laplacian_pyramid[i],name);
+	}
+	
+	// liberando memoria
+	
+	forn(i,levels)
+		DeleteMatrix(gauss_pyramid[i]);
+	free(gauss_pyramid);
+	
+	DeleteMatrix(I);
+*/
+	ColorImage** color_images;
+	Matrix** grey_images;
+	Matrix** contrast;
+	Matrix** saturation;
+	Matrix** exposeness;
+	Matrix** weights;
+	ColorImage* fused;
+	int i, n_samples;
+	
+	n_samples = SAMPLES;
+	
+	color_images = malloc(sizeof(ColorImage*)*n_samples);
+	color_images[0] = LoadColorImage("A.jpg");
+	color_images[1] = LoadColorImage("B.jpg");
+	color_images[2] = LoadColorImage("C.jpg");
+	color_images[3] = LoadColorImage("D.jpg");
+	
+	grey_images = malloc(sizeof(Matrix*)*n_samples);
+	forn(i,n_samples)
+		grey_images[i] = DesaturateImage(color_images[i]);
+	
+	contrast = malloc(sizeof(Matrix*)*n_samples);
+	forn(i,n_samples)
+		contrast[i] = Contrast(grey_images[i]);
+	
+	saturation = malloc(sizeof(Matrix*)*n_samples);
+	forn(i,n_samples)
+		saturation[i] = Saturation(color_images[i]);
+	
+	exposeness = malloc(sizeof(Matrix*)*n_samples);
+	forn(i,n_samples)
+		exposeness[i] = Exposeness(color_images[i]);
+
+	weights = malloc(sizeof(Matrix*)*n_samples);
+	forn(i,n_samples)
+		weights[i] = Weight(contrast[i],saturation[i],exposeness[i]);
+	
+	NormalizeWeights(weights,n_samples);
+	
+	fused = NaiveFusion(color_images,weights,n_samples);
+	
+	SaveColorImage(fused,"final.jpg");
+
+	return 0;
+}
+
+Matrix* LoadGrayscaleImage(const char* filename)
+{
+	int i, j;
+	IplImage* img;
+	Matrix* C;
+
+	img = cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
+	if(!img)
+	{
+		printf("Could not load image file: %s\n",filename);
 		exit(0);
 	}
-
-	samples = argc-1;
+	C = NewMatrix(img->height,img->width);
 	
-	// load an image
-	// CV_LOAD_IMAGE_COLOR
-	// CV_LOAD_IMAGE_GRAYSCALE
-	// CV_LOAD_IMAGE_UNCHANGED
-	
-	double* data;
-	
-	for(k=0;k<samples;k++)
+	for(i=0;i<C->rows;i++) for(j=0;j<C->cols;j++)
 	{
-		img = cvLoadImage(argv[1+k],CV_LOAD_IMAGE_UNCHANGED);
+		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j);
 		
-		if(!img){
-			printf("Could not load image file: %s\n",argv[1+k]);
-			exit(0);
-		}
-		
-		if (k==0)
-		{
-			// get the image data
-			height		= img->height;
-			width		= img->width;
-			channels	= img->nChannels;
-			step		= img->widthStep;
-			depth		= img->depth;
-			
-			data = malloc(sizeof(double)*height*width*channels*samples);
-		}
-		else
-		{
-			// check the image data
-			assert(height == img->height);
-			assert(width == img->width);
-			assert(channels == img->nChannels);
-			assert(step == img->widthStep);
-			assert(depth == img->depth);
-		}
-		
-		printf("Processing a %dx%d image with %d channels, %d depth, %d step\n",height,width,channels,depth,step);
-		
-		// normalizo los valores de los pixeles a doubles entre 0 y 1
-		for(i=0;i<height;i++) for(j=0;j<width;j++)
-		{
-			unsigned char* src = (unsigned char*)(img->imageData + i*step + j*channels);
-			double* dst = (double*)(data + i*width*channels*samples + j*channels*samples + k*channels);
-			
-			unsigned char b = src[0];
-			unsigned char g = src[1];
-			unsigned char r = src[2];
-			
-			dst[0] = ((double)r)/255.0;
-			dst[1] = ((double)g)/255.0;
-			dst[2] = ((double)b)/255.0;
-		}
-
-		cvReleaseImage(&img);
+		ELEM(C,i,j) = (double)(src[0]/255.0);
 	}
 	
-	// genero la imagen en escala de grises
-	printf("Generating grayscale data\n");
-	double* data_grey = malloc(sizeof(double)*height*width*samples);
-	for(i=0;i<height;i++) for(j=0;j<width;j++) for(k=0;k<samples;k++)
+	return C;
+}
+
+void SaveGrayscaleImage(const Matrix* I, const char* filename)
+{
+	int i, j;
+	
+	IplImage* img;
+	img = cvCreateImage(cvSize(I->cols,I->rows), IPL_DEPTH_8U, 1);
+	
+	for(i=0;i<I->rows;i++) for(j=0;j<I->cols;j++)
 	{
-		double* pix = data + ( i*width*channels*samples + j*channels*samples + k*channels );
-		data_grey[ i*width*samples + j*samples + k ] = 
-			( pix[0]*0.299 + pix[1]*0.587 + pix[2]*0.114 );
+		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j);
+		dst[0] = (unsigned char)(ELEM(I,i,j)*255.0);
 	}
+	
+	if(!cvSaveImage(filename,img,0))
+		printf("Could not save: %s\n",filename);
 
-	// guardo las imagenes en escala de grises para probar
-	printf("Saving grayscale images\n");
-	SaveImgs(data_grey,width,height,samples,"grey_");
+	cvReleaseImage(&img);
+}
 
-	// CONTRAST (aplico el operador laplaciano)
-	printf("Generating contrast data\n");
-	// cvLaplace(img_grey,img_lap,1);
-
-	double* contrast = malloc(sizeof(double)*height*width*samples);
-
-	for(i=1;i<height-1;i++) for(j=1;j<width-1;j++) for(k=0;k<samples;k++)
+Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels)
+{
+	int k;
+	Matrix** pyramid;
+	
+	pyramid = malloc(sizeof(Matrix*)*levels);
+	
+	// copio el primer nivel como la imagen original
+	pyramid[0] = CopyMatrix(I);
+	
+	for (k=1;k<levels;k++)
 	{
-		unsigned int row_size = width*samples;
-		unsigned int col_size = samples;
-		unsigned int n = i*row_size + j*col_size + k;
-		
-		contrast[n] = 
-			(
-				0.0*data_grey[ n - row_size - col_size ] +
-				1.0*data_grey[ n - row_size ] +
-				0.0*data_grey[ n - row_size + col_size ] +
-				
-				1.0*data_grey[ n - col_size ] +
-				-4.0*data_grey[ n ] +
-				1.0*data_grey[ n + col_size ] +
-				
-				0.0*data_grey[ n + row_size - col_size ] +
-				1.0*data_grey[ n + row_size ] +
-				0.0*data_grey[ n + row_size + col_size ]
-			);
-		
-		if ( contrast[n]<0 ) contrast[n] *= -1;
+		I = Downsample(I);
+		pyramid[k] = I;
 	}
+	
+	return pyramid;
+}
 
-	printf("Saving contrast images\n");
-	SaveImgs(contrast,width,height,samples,"contrast_");
+Matrix* Downsample(const Matrix* I)
+{
+	int i, j;
+	Matrix* gauss_kernel;
+	Matrix* convolved;
+	Matrix* downsampled;
+	
+	gauss_kernel = NewMatrix(5,5);
+	ELEM(gauss_kernel,0,0)=0.0039; ELEM(gauss_kernel,0,1)=0.0156; ELEM(gauss_kernel,0,2)=0.0234; ELEM(gauss_kernel,0,3)=0.0156; ELEM(gauss_kernel,0,4)=0.0039;
+	ELEM(gauss_kernel,1,0)=0.0156; ELEM(gauss_kernel,1,1)=0.0625; ELEM(gauss_kernel,1,2)=0.0938; ELEM(gauss_kernel,1,3)=0.0625; ELEM(gauss_kernel,1,4)=0.0156;
+	ELEM(gauss_kernel,2,0)=0.0234; ELEM(gauss_kernel,2,1)=0.0938; ELEM(gauss_kernel,2,2)=0.1406; ELEM(gauss_kernel,2,3)=0.0938; ELEM(gauss_kernel,2,4)=0.0234;
+	ELEM(gauss_kernel,3,0)=0.0156; ELEM(gauss_kernel,3,1)=0.0625; ELEM(gauss_kernel,3,2)=0.0938; ELEM(gauss_kernel,3,3)=0.0625; ELEM(gauss_kernel,3,4)=0.0156;
+	ELEM(gauss_kernel,4,0)=0.0039; ELEM(gauss_kernel,4,1)=0.0156; ELEM(gauss_kernel,4,2)=0.0234; ELEM(gauss_kernel,4,3)=0.0156; ELEM(gauss_kernel,4,4)=0.0039;
+	
+	convolved = Convolve(I,gauss_kernel,REPLICATE);
+	
+	downsampled = NewMatrix(I->rows/2,I->cols/2);
+	
+	forn(i,downsampled->rows) forn(j,downsampled->cols)
+		ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);
+	
+	DeleteMatrix(gauss_kernel);
+	DeleteMatrix(convolved);
+	
+	return downsampled;
+}
 
-	// SATURATION (standard deviation)
-	printf("Generating saturation data\n");
-
-	double* saturation = malloc(sizeof(double)*height*width*samples);
-
-	for(i=0;i<height;i++) for(j=0;j<width;j++) for(k=0;k<samples;k++)
+Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
+{
+	int k;
+	Matrix* J;
+	Matrix** pyramid;
+	
+	pyramid = malloc(sizeof(Matrix*)*levels);
+	
+	J = I;
+	for (k=0;k<levels-1;k++)
 	{
-		double* pix = data + (i*width*channels*samples + j*channels*samples + k*channels);
+		I = Downsample(J);
 		
-		double b = pix[0];
-		double g = pix[1];
-		double r = pix[2];
+		int odd_rows = J->rows - 2*I->rows;
+		int odd_cols = J->cols - 2*I->cols;
+		
+		pyramid[k] = Substract(J,Upsample(I,odd_rows,odd_cols));
+		
+		J = I;
+	}
+	
+	pyramid[levels-1] = J;
+	
+	return pyramid;
+}
 
+Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
+{
+	int i, j;
+	Matrix* gauss_kernel;
+	Matrix* upsampled;
+	
+	gauss_kernel = NewMatrix(5,5);
+	ELEM(gauss_kernel,0,0)=0.0039; ELEM(gauss_kernel,0,1)=0.0156; ELEM(gauss_kernel,0,2)=0.0234; ELEM(gauss_kernel,0,3)=0.0156; ELEM(gauss_kernel,0,4)=0.0039;
+	ELEM(gauss_kernel,1,0)=0.0156; ELEM(gauss_kernel,1,1)=0.0625; ELEM(gauss_kernel,1,2)=0.0938; ELEM(gauss_kernel,1,3)=0.0625; ELEM(gauss_kernel,1,4)=0.0156;
+	ELEM(gauss_kernel,2,0)=0.0234; ELEM(gauss_kernel,2,1)=0.0938; ELEM(gauss_kernel,2,2)=0.1406; ELEM(gauss_kernel,2,3)=0.0938; ELEM(gauss_kernel,2,4)=0.0234;
+	ELEM(gauss_kernel,3,0)=0.0156; ELEM(gauss_kernel,3,1)=0.0625; ELEM(gauss_kernel,3,2)=0.0938; ELEM(gauss_kernel,3,3)=0.0625; ELEM(gauss_kernel,3,4)=0.0156;
+	ELEM(gauss_kernel,4,0)=0.0039; ELEM(gauss_kernel,4,1)=0.0156; ELEM(gauss_kernel,4,2)=0.0234; ELEM(gauss_kernel,4,3)=0.0156; ELEM(gauss_kernel,4,4)=0.0039;
+	
+	upsampled = NewMatrix(2*I->rows,2*I->cols);
+	
+	forn(i,I->rows) forn(j,I->cols)
+	{
+		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
+		ELEM(upsampled,2*i,2*j+1) = 0;
+		ELEM(upsampled,2*i+1,2*j) = 0;
+		ELEM(upsampled,2*i+1,2*j+1) = 0;
+	}
+	
+	upsampled = Convolve(upsampled,gauss_kernel,REPLICATE);
+	
+	return upsampled;
+}
+
+ColorImage* LoadColorImage(const char* filename)
+{
+	int i, j;
+	IplImage* img;
+	Matrix* R; Matrix* G; Matrix* B;
+	ColorImage* I;
+
+	img = cvLoadImage(filename,CV_LOAD_IMAGE_UNCHANGED);
+	if(!img)
+	{
+		printf("Could not load image file: %s\n",filename);
+		exit(0);
+	}
+	
+	I = malloc(sizeof(ColorImage));
+	R = NewMatrix(img->height,img->width); I->R = R;
+	G = NewMatrix(img->height,img->width); I->G = G;
+	B = NewMatrix(img->height,img->width); I->B = B;
+	
+	for(i=0;i<R->rows;i++) for(j=0;j<R->cols;j++)
+	{
+		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
+		
+		ELEM(B,i,j) = (double)(src[0]/255.0);
+		ELEM(G,i,j) = (double)(src[1]/255.0);
+		ELEM(R,i,j) = (double)(src[2]/255.0);
+	}
+	
+	return I;
+}
+
+void SaveColorImage(const ColorImage* I, const char* filename)
+{
+	int i, j;
+	
+	IplImage* img;
+	img = cvCreateImage(cvSize(I->R->cols,I->R->rows), IPL_DEPTH_8U, 3);
+	
+	for(i=0;i<I->R->rows;i++) for(j=0;j<I->R->cols;j++)
+	{
+		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
+		
+		dst[2] = (unsigned char)(ELEM(I->R,i,j)*255.0);
+		dst[1] = (unsigned char)(ELEM(I->G,i,j)*255.0);
+		dst[0] = (unsigned char)(ELEM(I->B,i,j)*255.0);
+	}
+	
+	if(!cvSaveImage(filename,img,0))
+		printf("Could not save: %s\n",filename);
+
+	cvReleaseImage(&img);
+}
+
+Matrix* DesaturateImage(const ColorImage* I)
+{
+	int i, j;
+	Matrix* J;
+
+	J = NewMatrix(I->R->rows,I->R->cols);
+	
+	forn(i,J->rows) forn(j,J->cols)
+		ELEM(J,i,j) = (
+			ELEM(I->R,i,j)*0.299 +
+			ELEM(I->G,i,j)*0.587 +
+			ELEM(I->B,i,j)*0.114
+		);
+	
+	return J;
+}
+
+Matrix* Contrast(const Matrix* I)
+{
+	int i, j;
+	Matrix* lap_kernel;
+	Matrix* J;
+	
+	lap_kernel = NewMatrix(3,3);
+	ELEM(lap_kernel,0,0)=0.0; ELEM(lap_kernel,0,1)=1.0; ELEM(lap_kernel,0,2)=0.0;
+	ELEM(lap_kernel,1,0)=1.0; ELEM(lap_kernel,1,1)=-4.0; ELEM(lap_kernel,1,2)=1.0;
+	ELEM(lap_kernel,2,0)=0.0; ELEM(lap_kernel,2,1)=1.0; ELEM(lap_kernel,2,2)=0.0;
+	
+	J = Convolve(I,lap_kernel,REPLICATE);
+	
+	forn(i,J->rows) forn(j,J->cols)
+		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;
+	
+	return J;
+}
+
+Matrix* Saturation(const ColorImage* I)
+{
+	int i, j;
+	Matrix* J;
+	
+	J = NewMatrix(I->R->rows,I->R->cols);
+	
+	forn(i,J->rows) forn(j,J->cols)
+	{
+		double r = ELEM(I->R,i,j);
+		double g = ELEM(I->G,i,j);
+		double b = ELEM(I->B,i,j);
+		
 		// calculo la media (promedio)
 		double mu = (b+g+r)/3;
 
 		// calculo el desvio standard
 		double sd = sqrt( ( pow(r-mu,2) + pow(g-mu,2) + pow(b-mu,2) ) / 3 );
 		
-		saturation[ i*width*samples + j*samples + k ] = sd;
-	}
-
-	printf("Saving saturation images\n");
-	SaveImgs(saturation,width,height,samples,"saturation_");
-
-	// WELL EXPOSENESS
-	printf("Generating exposeness data\n");
-	
-	double* exposeness = malloc(sizeof(double)*height*width*samples);
-	
-	for(i=0;i<height;i++) for(j=0;j<width;j++) for(k=0;k<samples;k++)
-	{
-		double* pix = data + i*width*channels*samples + j*channels*samples + k*channels;
-		
-		double ex = 1;
-		int n;
-		for(n=0;n<3;n++)
-		{
-			ex *= exp( -.5*pow((pix[n])-.5, 2) / SIGMA2 );
-		}
-		
-		exposeness[ i*width*samples + j*samples + k ] = ex;
-	}
-
-	printf("Saving exposeness images\n");
-	SaveImgs(exposeness,width,height,samples,"exposeness_");
-
-	// WEIGHT MATRIX
-	printf("Generating weight data\n");
-	
-	double* weight = malloc(sizeof(double)*height*width*samples);
-	
-	for(i=0;i<height;i++) for(j=0;j<width;j++) for(k=0;k<samples;k++)
-	{
-		unsigned int n = i*width*samples + j*samples + k;
-		double w = contrast[n] * saturation[n] * exposeness[n];
-		weight[n] = w;
+		ELEM(J,i,j) = sd;
 	}
 	
-	printf("Normalizing weight data\n");
-	
-	for(i=0;i<height;i++) for(j=0;j<width;j++)
-	{
-		double sum = exp(-12);
-		
-		for(k=0;k<samples;k++)
-			sum += weight[i*width*samples + j*samples + k];
-		
-		for(k=0;k<samples;k++)
-			weight[i*width*samples + j*samples + k] /= sum;
-	}
-	
-	printf("Saving weight images\n");
-	SaveImgs(weight,width,height,samples,"weight_");
-	
-	// FINAL IMAGE
-	double* final = malloc(sizeof(double)*height*width*channels);
-	
-	int c;
-	for(i=0;i<height;i++) for(j=0;j<width;j++) for(c=0;c<channels;c++)
-	{
-		unsigned int n = i*width*channels + j*channels + c;
-		final[n] = 0;
-		
-		for(k=0;k<samples;k++)
-			final[n] +=
-				data[ i*width*samples*channels + j*samples*channels + k*channels + c ] *
-				weight[ i*width*samples + j*samples + k ];
-	}
-	
-	SaveImg(final,width,height,channels,"final");
-	
-	return 0;
+	return J;
 }
 
-void SaveImgs(double* data, int width, int height, int samples, char* prefix)
-{
-	int i, j, k;
-	IplImage* img;
-	
-	for(k=0;k<samples;k++)
-	{
-		img = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, 1);
-		
-		for(i=0;i<height;i++) for(j=0;j<width;j++)
-		{
-			double* src = (double*)(data + i*width*samples + j*samples + k);
-			unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j);
-			
-			dst[0] = (unsigned char)(src[0]*255);
-		}
-		
-		int size = strlen(prefix)+5;
-		char* s = malloc(size);
-		memset(s,0,size);
-		strcpy(s,prefix);
-		s[size-5] = (char)k + 48;
-		strncat(s+6,".jpg",4);
-		
-		printf("Saving grayscale data %s\n",s);
-		
-		if(!cvSaveImage(s,img,0))
-			printf("Could not save: %s\n",s);
-
-		cvReleaseImage(&img);
-	}
-}
-
-void SaveImg(double* data, int width, int height, int channels, char* name)
+Matrix* Exposeness(const ColorImage* I)
 {
 	int i, j;
-	IplImage* img;
+	Matrix* J;
 	
-	img = cvCreateImage(cvSize(width,height), IPL_DEPTH_8U, channels);
+	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	for(i=0;i<height;i++) for(j=0;j<width;j++)
+	forn(i,J->rows) forn(j,J->cols)
 	{
-		double* src = (double*)(data + i*width*channels + j*channels);
-		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*channels);
+		double ex = 1.0;
+		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / SIGMA2 );
+		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / SIGMA2 );
+		ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / SIGMA2 );
 		
-		dst[2] = (unsigned char)(src[0]*255.0);
-		dst[1] = (unsigned char)(src[1]*255.0);
-		dst[0] = (unsigned char)(src[2]*255.0);
+		ELEM(J,i,j) = ex;
 	}
 	
-	int size = strlen(name)+4;
-	char* s = malloc(size);
-	memset(s,0,size);
-	strcpy(s,name);
-	strncat(s,".jpg",4);
-	
-	printf("Saving color data %s\n",s);
-	
-	if(!cvSaveImage(s,img,0))
-		printf("Could not save: %s\n",s);
-
-	cvReleaseImage(&img);
+	return J;
 }
 
-void ShowImg(IplImage* img)
+Matrix* Weight(const Matrix* contrast, const Matrix* saturation, const Matrix* exposeness)
 {
-	// create a window
-	cvNamedWindow("mainWin", CV_WINDOW_AUTOSIZE); 
-	cvMoveWindow("mainWin", 100, 100);
-
-	// show the image
-	cvShowImage("mainWin", img );
-
-	// wait for a key
-	cvWaitKey(0);
+	int i, j;
+	Matrix* J;
+	
+	J = NewMatrix(contrast->rows,contrast->cols);
+	
+	forn(i,J->rows) forn(j,J->cols)
+		ELEM(J,i,j) =
+			ELEM(contrast,i,j) +
+			ELEM(saturation,i,j) +
+			ELEM(exposeness,i,j);
+	
+	return J;
 }
 
-void PrintM(double* data,int width,int height,int channels)
+void NormalizeWeights(Matrix** weights, const int n_samples)
 {
-	int i,j;
-	for(i=0;i<height;i++) for(j=0;j<width;j++)
+	int i, j, k;
+	
+	forn(i,weights[0]->rows) forn(j,weights[0]->cols)
 	{
-		double* src = (double*)(data + i*width*channels + j*channels);
+		double sum = exp(-12);;
 		
-		unsigned char r = (unsigned char)src[0];
-		unsigned char g = (unsigned char)src[1];
-		unsigned char b = (unsigned char)src[2];
+		forn(k,n_samples)
+			sum += ELEM(weights[k],i,j);
 		
-		printf("(%02X%02X%02X) ",r,g,b);
-		
-		if (j==width-1)
-			printf("\n");
+		forn(k,n_samples)
+			ELEM(weights[k],i,j) /= sum;
 	}
 }
 
-void PrintA(unsigned char* data,int width,int step,int height,int channels)
+ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples)
 {
-	int i,j;
-	for(i=0;i<height;i++) for(j=0;j<width;j++)
+	int i, j, k, rows, cols;
+	Matrix* R; Matrix* G; Matrix* B;
+	ColorImage* fusioned_image;
+	
+	rows = color_images[0]->R->rows;
+	cols = color_images[0]->R->cols;
+	
+	fusioned_image = malloc(sizeof(ColorImage));
+	R = NewMatrix(rows,cols); fusioned_image->R = R;
+	G = NewMatrix(rows,cols); fusioned_image->G = G;
+	B = NewMatrix(rows,cols); fusioned_image->B = B;
+	
+	forn(i,rows) forn(j,cols)
 	{
-		unsigned char* src = (unsigned char*)(data + i*step + j*channels);
+		ELEM(R,i,j) = 0;
+		ELEM(G,i,j) = 0;
+		ELEM(B,i,j) = 0;
 		
-		printf("(%02X%02X%02X) ",src[2],src[1],src[0]);
-		
-		if (j==width-1)
-			printf("\n");
+		forn(k,n_samples)
+		{
+			ELEM(R,i,j) += ELEM(color_images[k]->R,i,j) * ELEM(weights[k],i,j);
+			ELEM(G,i,j) += ELEM(color_images[k]->G,i,j) * ELEM(weights[k],i,j);
+			ELEM(B,i,j) += ELEM(color_images[k]->B,i,j) * ELEM(weights[k],i,j);
+		}
 	}
+	
+	return fusioned_image;
 }
