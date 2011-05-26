@@ -5,12 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "Matrix.h"
+
 #define WC = 1
 #define WS = 1
 #define WE = 1
-#define SIGMA .2
-
-//#define PIX(image,i,j) ((i)*(image)->widthStep + (j)*(image)->nChannels)
+#define SIGMA2 .04 // representa SIGMA^2 cuando SIGMA = .2
 
 void SaveImgs(double* data, int width, int height, int samples, char* prefix);
 void SaveImg(double* data, int width, int height, int channels, char* name);
@@ -80,9 +80,9 @@ int main(int argc, char* argv[])
 			unsigned char g = src[1];
 			unsigned char r = src[2];
 			
-			dst[0] = ((double)r)/255;
-			dst[1] = ((double)g)/255;
-			dst[2] = ((double)b)/255;
+			dst[0] = ((double)r)/255.0;
+			dst[1] = ((double)g)/255.0;
+			dst[2] = ((double)b)/255.0;
 		}
 
 		cvReleaseImage(&img);
@@ -116,18 +116,20 @@ int main(int argc, char* argv[])
 		
 		contrast[n] = 
 			(
-				0*data_grey[ n - row_size - col_size ] +
-				1*data_grey[ n - row_size ] +
-				0*data_grey[ n - row_size + col_size ] +
+				0.0*data_grey[ n - row_size - col_size ] +
+				1.0*data_grey[ n - row_size ] +
+				0.0*data_grey[ n - row_size + col_size ] +
 				
-				1*data_grey[ n - col_size ] +
-				-4*data_grey[ n ] +
-				1*data_grey[ n + col_size ] +
+				1.0*data_grey[ n - col_size ] +
+				-4.0*data_grey[ n ] +
+				1.0*data_grey[ n + col_size ] +
 				
-				0*data_grey[ n + row_size - col_size ] +
-				1*data_grey[ n + row_size ] +
-				0*data_grey[ n + row_size + col_size ]
+				0.0*data_grey[ n + row_size - col_size ] +
+				1.0*data_grey[ n + row_size ] +
+				0.0*data_grey[ n + row_size + col_size ]
 			);
+		
+		if ( contrast[n]<0 ) contrast[n] *= -1;
 	}
 
 	printf("Saving contrast images\n");
@@ -165,13 +167,13 @@ int main(int argc, char* argv[])
 	
 	for(i=0;i<height;i++) for(j=0;j<width;j++) for(k=0;k<samples;k++)
 	{
-		double* pix = data + (i*width*channels*samples + j*channels*samples + k*channels);
+		double* pix = data + i*width*channels*samples + j*channels*samples + k*channels;
 		
 		double ex = 1;
 		int n;
 		for(n=0;n<3;n++)
 		{
-			ex *= exp( -.5*pow((pix[n])-.5, 2) / SIGMA );
+			ex *= exp( -.5*pow((pix[n])-.5, 2) / SIGMA2 );
 		}
 		
 		exposeness[ i*width*samples + j*samples + k ] = ex;
@@ -228,45 +230,6 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-double* Downsample(unsigned char* data, int width, int height)
-{
-	int i, j;
-	double* aux = malloc(sizeof(double)*height*width*samples);
-	double* next = malloc(sizeof(double)*(height/2)*(width/2)*samples);
-	
-	// apply gaussian filter
-	// 1D 5 tap low pass filter (used as 2D)
-	double kernel[5] = {.0625, .25, .375, .25, .0625};
-	
-	for(i=0;i<height;i++) for(j=2;j<width-2;j++) for(k=0;k<samples-2;k++)
-	{
-		int n = i*width*samples + j*samples + k;
-		
-		if ( j<2 || width-3 < j )
-			aux[n] = data[n];
-		else
-			aux[n] =
-				data[n-2]*kernel[0] +
-				data[n-1]*kernel[1] +
-				data[n]*kernel[2] +
-				data[n+1]*kernel[3] +
-				data[n+2]*kernel[4];
-	}
-	
-	for(i=2;i<height-2;i++) for(j=0;j<width;j++)
-	{
-		int n = i*width + j;
-		aux[n] = aux[n-2*width] + aux[n-width] + aux[n] + aux[n+width] + aux[n+2*width];
-	}
-	
-	for(i=0;i<height/2;i++) for(j=0;j<width/2;j++)
-	{
-		next[ i*width + j ] = aux[ 2*i*width + 2*j ];
-	}
-	
-	return next;
-}
-
 void SaveImgs(double* data, int width, int height, int samples, char* prefix)
 {
 	int i, j, k;
@@ -312,9 +275,9 @@ void SaveImg(double* data, int width, int height, int channels, char* name)
 		double* src = (double*)(data + i*width*channels + j*channels);
 		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*channels);
 		
-		dst[2] = (unsigned char)(src[0]*255);
-		dst[1] = (unsigned char)(src[1]*255);
-		dst[0] = (unsigned char)(src[2]*255);
+		dst[2] = (unsigned char)(src[0]*255.0);
+		dst[1] = (unsigned char)(src[1]*255.0);
+		dst[0] = (unsigned char)(src[2]*255.0);
 	}
 	
 	int size = strlen(name)+4;
