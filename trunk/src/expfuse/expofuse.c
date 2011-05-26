@@ -23,6 +23,7 @@ Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_sampl
 ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B);
 ColorImage* LoadColorImage(const char* filename);
 void SaveColorImage(const ColorImage* I, const char* filename);
+void TruncateColorImage(ColorImage* I);
 Matrix* LoadGrayscaleImage(const char* filename);
 void SaveGrayscaleImage(const Matrix* I, const char* filename);
 Matrix* DesaturateImage(const ColorImage* I);
@@ -50,22 +51,31 @@ int main(int argc, char* argv[])
 	ColorImage* fused_image;
 	
 	if(argc<2){
-		printf("Usage: main <image-file-name>\n\7");
+		printf("Usage: expofuse [FILE]\n\7");
 		exit(0);
 	}
 	
 	n_samples = argc-1;
 	
+	printf("Loading %d images\n",n_samples);
+	
 	color_images = malloc(sizeof(ColorImage*)*n_samples);
 	forn(k,n_samples)
 		color_images[k] = LoadColorImage(argv[1+k]);
 	
+	printf("Generating weights\n");
+	
 	weights = ConstructWeights(color_images,n_samples);
+	
+	printf("Fusing the naive way\n");
 	
 	naive_fused_image = NaiveFusion(color_images,weights,n_samples);
 	SaveColorImage(naive_fused_image,"fused_image_naive.jpg");
 
+	printf("Fusing images with weights\n");
+
 	fused_image = Fusion(color_images,weights,n_samples);
+	TruncateColorImage(fused_image);
 	SaveColorImage(fused_image,"fused_image.jpg");
 
 	return 0;
@@ -199,25 +209,17 @@ Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels)
 Matrix* Downsample(const Matrix* I)
 {
 	int i, j;
-	Matrix* gauss_kernel;
 	Matrix* convolved;
 	Matrix* downsampled;
 	
-	gauss_kernel = NewMatrix(5,5);
-	ELEM(gauss_kernel,0,0)=0.0039; ELEM(gauss_kernel,0,1)=0.0156; ELEM(gauss_kernel,0,2)=0.0234; ELEM(gauss_kernel,0,3)=0.0156; ELEM(gauss_kernel,0,4)=0.0039;
-	ELEM(gauss_kernel,1,0)=0.0156; ELEM(gauss_kernel,1,1)=0.0625; ELEM(gauss_kernel,1,2)=0.0938; ELEM(gauss_kernel,1,3)=0.0625; ELEM(gauss_kernel,1,4)=0.0156;
-	ELEM(gauss_kernel,2,0)=0.0234; ELEM(gauss_kernel,2,1)=0.0938; ELEM(gauss_kernel,2,2)=0.1406; ELEM(gauss_kernel,2,3)=0.0938; ELEM(gauss_kernel,2,4)=0.0234;
-	ELEM(gauss_kernel,3,0)=0.0156; ELEM(gauss_kernel,3,1)=0.0625; ELEM(gauss_kernel,3,2)=0.0938; ELEM(gauss_kernel,3,3)=0.0625; ELEM(gauss_kernel,3,4)=0.0156;
-	ELEM(gauss_kernel,4,0)=0.0039; ELEM(gauss_kernel,4,1)=0.0156; ELEM(gauss_kernel,4,2)=0.0234; ELEM(gauss_kernel,4,3)=0.0156; ELEM(gauss_kernel,4,4)=0.0039;
-	
-	convolved = Convolve(I,gauss_kernel,REPLICATE);
+	convolved = Convolve(I,&GAUSS_KERN_5x1,SYMMETRIC);
+	convolved = Convolve(convolved,&GAUSS_KERN_1x5,SYMMETRIC);
 	
 	downsampled = NewMatrix(I->rows/2,I->cols/2);
 	
 	forn(i,downsampled->rows) forn(j,downsampled->cols)
 		ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);
 	
-	DeleteMatrix(gauss_kernel);
 	DeleteMatrix(convolved);
 	
 	return downsampled;
@@ -307,7 +309,6 @@ Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
 Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 {
 	int i, j;
-	Matrix* gauss_kernel;
 	Matrix* upsampled;
 	
 	if ((odd_rows!=1 && odd_rows!=0) || (odd_cols!=1 && odd_cols!=0))
@@ -315,13 +316,6 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 		printf("Error: Upsample - odd_rows: %d odd_cols: %d\n",odd_rows,odd_cols);
 		exit(0);
 	}
-	
-	gauss_kernel = NewMatrix(5,5);
-	ELEM(gauss_kernel,0,0)=0.0039; ELEM(gauss_kernel,0,1)=0.0156; ELEM(gauss_kernel,0,2)=0.0234; ELEM(gauss_kernel,0,3)=0.0156; ELEM(gauss_kernel,0,4)=0.0039;
-	ELEM(gauss_kernel,1,0)=0.0156; ELEM(gauss_kernel,1,1)=0.0625; ELEM(gauss_kernel,1,2)=0.0938; ELEM(gauss_kernel,1,3)=0.0625; ELEM(gauss_kernel,1,4)=0.0156;
-	ELEM(gauss_kernel,2,0)=0.0234; ELEM(gauss_kernel,2,1)=0.0938; ELEM(gauss_kernel,2,2)=0.1406; ELEM(gauss_kernel,2,3)=0.0938; ELEM(gauss_kernel,2,4)=0.0234;
-	ELEM(gauss_kernel,3,0)=0.0156; ELEM(gauss_kernel,3,1)=0.0625; ELEM(gauss_kernel,3,2)=0.0938; ELEM(gauss_kernel,3,3)=0.0625; ELEM(gauss_kernel,3,4)=0.0156;
-	ELEM(gauss_kernel,4,0)=0.0039; ELEM(gauss_kernel,4,1)=0.0156; ELEM(gauss_kernel,4,2)=0.0234; ELEM(gauss_kernel,4,3)=0.0156; ELEM(gauss_kernel,4,4)=0.0039;
 	
 	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
 	
@@ -341,7 +335,8 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 		forn(i,upsampled->rows)
 			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
 	
-	upsampled = Convolve(upsampled,gauss_kernel,REPLICATE);
+	upsampled = Convolve(upsampled,&GAUSS_KERN_5x1,SYMMETRIC);
+	upsampled = Convolve(upsampled,&GAUSS_KERN_1x5,SYMMETRIC);
 	
 	return upsampled;
 }
@@ -384,9 +379,15 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 	IplImage* img;
 	img = cvCreateImage(cvSize(I->R->cols,I->R->rows), IPL_DEPTH_8U, 3);
 	
-	for(i=0;i<I->R->rows;i++) for(j=0;j<I->R->cols;j++)
+	forn(i,I->R->rows) forn(j,I->R->cols)
 	{
 		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
+		
+		if ( ELEM(I->R,i,j)<0 || ELEM(I->G,i,j)<0 || ELEM(I->B,i,j)<0 )
+			printf("WARNING: negative values present!\n");
+		
+		if ( 1<ELEM(I->R,i,j) || 1<ELEM(I->G,i,j) || 1<ELEM(I->B,i,j) )
+			printf("WARNING: values greater than 1 present!\n");
 		
 		dst[2] = (unsigned char)(ELEM(I->R,i,j)*(ELEM(I->R,i,j)<0?-1:1)*255.0);
 		dst[1] = (unsigned char)(ELEM(I->G,i,j)*(ELEM(I->G,i,j)<0?-1:1)*255.0);
@@ -397,6 +398,23 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 		printf("Could not save: %s\n",filename);
 
 	cvReleaseImage(&img);
+}
+
+void TruncateColorImage(ColorImage* I)
+{
+	int i, j;
+	
+	forn(i,I->R->rows) forn(j,I->R->cols)
+	{
+		if ( ELEM(I->R,i,j)<0 ) ELEM(I->R,i,j)=0;
+		if ( 1<ELEM(I->R,i,j) ) ELEM(I->R,i,j)=1;
+		
+		if ( ELEM(I->G,i,j)<0 ) ELEM(I->G,i,j)=0;
+		if ( 1<ELEM(I->G,i,j) ) ELEM(I->G,i,j)=1;
+		
+		if ( ELEM(I->B,i,j)<0 ) ELEM(I->B,i,j)=0;
+		if ( 1<ELEM(I->B,i,j) ) ELEM(I->B,i,j)=1;
+	}
 }
 
 Matrix* DesaturateImage(const ColorImage* I)
@@ -419,15 +437,9 @@ Matrix* DesaturateImage(const ColorImage* I)
 Matrix* Contrast(const Matrix* I)
 {
 	int i, j;
-	Matrix* lap_kernel;
 	Matrix* J;
 	
-	lap_kernel = NewMatrix(3,3);
-	ELEM(lap_kernel,0,0)=0.0; ELEM(lap_kernel,0,1)=1.0; ELEM(lap_kernel,0,2)=0.0;
-	ELEM(lap_kernel,1,0)=1.0; ELEM(lap_kernel,1,1)=-4.0; ELEM(lap_kernel,1,2)=1.0;
-	ELEM(lap_kernel,2,0)=0.0; ELEM(lap_kernel,2,1)=1.0; ELEM(lap_kernel,2,2)=0.0;
-	
-	J = Convolve(I,lap_kernel,REPLICATE);
+	J = Convolve(I,&LAPLACIAN_KERN_3x3,REPLICATE);
 	
 	forn(i,J->rows) forn(j,J->cols)
 		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;
@@ -570,7 +582,7 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 		Matrix** weight_gauss_pyramid = GaussianPyramid(weights[i],n_levels);
 		ColorImage** laplacian_image_pyramid = ColorLaplacianPyramid(color_images[i],n_levels);
 		
-		// 
+		// agrego cada nivel al resultado compuesto
 		forn(j,n_levels)
 		{
 			WeightColorImage(laplacian_image_pyramid[j],weight_gauss_pyramid[j]);

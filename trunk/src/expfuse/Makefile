@@ -1,13 +1,13 @@
 GCC = gcc
 
-laplacian: laplacian.o Matrix.o
+expofuse: expofuse.o Matrix.o
 	$(GCC)  $^ -Wall -g -o $@ `pkg-config --cflags --libs opencv`
 
-laplacian.o: laplacian.c Matrix.h
+expofuse.o: expofuse.c Matrix.h
 	$(GCC) -g -Wall -c $< -o $@ `pkg-config --cflags opencv`
 
 Matrix.o: Matrix.c Matrix.h
 	$(GCC) -g -Wall -c $< -o $@
 
 clean:
-	rm -rf *.o contrast_*  saturation_*  exposeness_*  weight_*  grey_*  
+	rm -rf *.o

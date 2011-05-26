@@ -1,5 +1,17 @@
 #include "Matrix.h"
 
+double GAUSS_KERN_5x1_DATA[5] = {0.0625,0.2500,0.3750,0.2500,0.0625};
+const Matrix GAUSS_KERN_5x1 = { .rows=5, .cols=1, .data = GAUSS_KERN_5x1_DATA };
+const Matrix GAUSS_KERN_1x5 = { .rows=1, .cols=5, .data = GAUSS_KERN_5x1_DATA };
+
+double LAPLACIAN_KERN_3x3_DATA[9] =
+{
+	0.0,1.0,0.0,
+	1.0,-4.0,1.0,
+	0.0,1.0,0.0
+};
+const Matrix LAPLACIAN_KERN_3x3 = { .rows=3, .cols=3, .data = LAPLACIAN_KERN_3x3_DATA };
+
 Matrix* NewMatrix(int rows, int cols)
 {
 	Matrix* A;
@@ -167,11 +179,13 @@ void PrintMatrix(const Matrix* A)
 void PrintMatrixMatStyle(const Matrix* A)
 {
 	int i, j;
-	printf("[ ");
 	for(i=0;i<A->rows;i++) 
 	{
-		if (0<i) printf("; ");
-		for(j=0;j<A->cols;j++) printf("%f ",ELEM(A,i,j));
+		for(j=0;j<A->cols;j++)
+		{
+			if (0<j) printf(",");
+			printf("%.5f",ELEM(A,i,j));
+		}
+		printf("\n");
 	}
-	printf("];\n");
 }
