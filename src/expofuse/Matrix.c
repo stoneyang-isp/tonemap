@@ -15,12 +15,10 @@ const Matrix LAPLACIAN_KERN_3x3 = { .rows=3, .cols=3, .data = LAPLACIAN_KERN_3x3
 Matrix* NewMatrix(int rows, int cols)
 {
 	Matrix* A;
-	
-	A = malloc(sizeof(Matrix*));
+	A = malloc(sizeof(Matrix));
 	A->rows=rows;
 	A->cols=cols;
 	A->data = malloc(sizeof(double)*rows*cols);
-	
 	return A;
 }
 
@@ -68,7 +66,7 @@ Matrix* Substract(const Matrix* A, const Matrix* B)
 	return C;
 }
 
-Matrix* Add(const Matrix* A, const Matrix* B)
+Matrix* AddMatrix(const Matrix* A, const Matrix* B)
 {
 	int i, j;
 	Matrix* C;
