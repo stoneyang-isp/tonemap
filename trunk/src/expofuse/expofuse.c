@@ -399,6 +399,8 @@ ColorImage* LoadColorImage(const char* filename)
 		ELEM(R,i,j) = (double)(src[2]/255.0);
 	}
 	
+	cvReleaseImage(&img);
+	
 	return I;
 }
 
@@ -609,7 +611,6 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 	
 	forn(i,n_samples)
 	{
-		printf("creando laplacian_image_pyramid\n");
 		// construyo piramide por cada imagen
 		Matrix** weight_gauss_pyramid = GaussianPyramid(weights[i],n_levels);
 		ColorImage** laplacian_image_pyramid = ColorLaplacianPyramid(color_images[i],n_levels);
