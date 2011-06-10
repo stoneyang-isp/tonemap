@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
 	if ( CommandOptionSet(argc,argv,"-v") )
 	{
 		PrintVersion();
+		extra_parameters += 1;
 		return 0;
 	}
 	
@@ -89,6 +90,7 @@ int main(int argc, char* argv[])
 	if ( CommandOptionSet(argc,argv,"-h") )
 	{
 		PrintHelp();
+		extra_parameters += 1;
 		return 0;
 	}
 	
@@ -170,7 +172,7 @@ void PrintHelp()
 {
 	printf("\n");
 	PrintVersion(); printf("\n");
-	printf("expofuse: fuses images with exposure fusion algoirithm\n\n");
+	printf("expofuse: fuses overlapping images with exposure fusion algoirithm\n\n");
 	printf("Usage: expofuse [options] <input files>\n");
 	printf("Valid options are:\n");
 	printf("  -o output file name with valid extension. default: 'fused_image.jpg'\n");
