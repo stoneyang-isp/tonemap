@@ -3,13 +3,18 @@
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 
 #include "Matrix.h"
 
-#define WC 1
-#define WS 1
-#define WE 1
+// program version
+#define VERSION 1
+#define SUBVERSION 0
+
+#define DEFAULT_CONTRAST_WEIGHT 1
+#define DEFAULT_SATURATION_WEIGHT 1
+#define DEFAULT_EXPOSENESS_WEIGHT 1
 #define SIGMA2 .04 // representa SIGMA^2 cuando SIGMA = .2
 
 typedef struct
@@ -19,10 +24,14 @@ typedef struct
 	Matrix* B;
 } ColorImage;
 
+const char* CommandOption(int argc, char* argv[], const char* option);
+int CommandOptionSet(int argc, char* argv[], const char* option);
+void PrintHelp();
+void PrintVersion();
 ColorImage* NewColorImage();
 void DeleteColorImage(ColorImage* image);
 ColorImage* CopyColorImage(const ColorImage* image);
-Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples);
+Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight);
 ColorImage* AddColorImage(const ColorImage* A, const ColorImage* B);
 ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B);
 ColorImage* LoadColorImage(const char* filename);
@@ -34,7 +43,7 @@ Matrix* DesaturateImage(const ColorImage* I);
 Matrix* Contrast(const Matrix* I);
 Matrix* Saturation(const ColorImage* I);
 Matrix* Exposeness(const ColorImage* I);
-Matrix* Weight(const Matrix* contrast, const Matrix* saturation, const Matrix* exposeness);
+Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* saturation, double saturation_weight, const Matrix* exposeness, double exposeness_weight);
 void NormalizeWeights(Matrix** weights, const int n_samples);
 void WeightColorImage(const ColorImage* color_image, const Matrix* weights);
 ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples);
@@ -53,23 +62,79 @@ int main(int argc, char* argv[])
 	ColorImage** color_images;
 //	ColorImage* naive_fused_image;
 	ColorImage* fused_image;
+	int extra_parameters = 0;
+	const char* output_name = "fused_image.jpg";
+	double contrast_weight = DEFAULT_CONTRAST_WEIGHT;
+	double saturation_weight = DEFAULT_SATURATION_WEIGHT;
+	double exposeness_weight = DEFAULT_EXPOSENESS_WEIGHT;
 	
-	if(argc<2){
-		printf("Usage: expofuse [FILE]\n\7");
-		exit(0);
+	if(argc<2)
+	{
+		printf("\n");
+		printf("Error: At least one input image is required as argument\n");
+		PrintHelp();
+		return 0;
 	}
 	
-	n_samples = argc-1;
+	const char* option;
+	
+	// if version is required, print and exit program
+	if ( CommandOptionSet(argc,argv,"-v") )
+	{
+		PrintVersion();
+		return 0;
+	}
+	
+	// if help is required, print and exit program
+	if ( CommandOptionSet(argc,argv,"-h") )
+	{
+		PrintHelp();
+		return 0;
+	}
+	
+	// if output name is given
+	option = CommandOption(argc,argv,"-o");
+	if (option)
+	{
+		output_name = option;
+		extra_parameters += 2;
+	}
+	
+	// if contrast weight is given
+	option = CommandOption(argc,argv,"-cw");
+	if (option)
+	{
+		contrast_weight = strtod(option,NULL);
+		extra_parameters += 2;
+	}
+	
+	// if saturation weight is given
+	option = CommandOption(argc,argv,"-sw");
+	if (option)
+	{
+		saturation_weight = strtod(option,NULL);
+		extra_parameters += 2;
+	}
+	
+	// if exposeness weight is given
+	option = CommandOption(argc,argv,"-ew");
+	if (option)
+	{
+		exposeness_weight = strtod(option,NULL);
+		extra_parameters += 2;
+	}
+	
+	n_samples = argc-1-extra_parameters;
 	
 	printf("Loading %d images\n",n_samples);
 	
 	color_images = malloc(sizeof(ColorImage*)*n_samples);
 	forn(k,n_samples)
-		color_images[k] = LoadColorImage(argv[1+k]);
+		color_images[k] = LoadColorImage(argv[1+extra_parameters+k]);
 	
-	printf("Generating weights\n");
+	printf("Generating weights with\n - contrast weight: %f\n - saturation weight %f\n - exposeness weight %f\n",contrast_weight,saturation_weight,exposeness_weight);
 	
-	weights = ConstructWeights(color_images,n_samples);
+	weights = ConstructWeights(color_images,n_samples,contrast_weight,saturation_weight,exposeness_weight);
 	
 //	printf("Fusing the naive way\n");
 	
@@ -80,7 +145,7 @@ int main(int argc, char* argv[])
 
 	fused_image = Fusion(color_images,weights,n_samples);
 	TruncateColorImage(fused_image);
-	SaveColorImage(fused_image,"fused_image.jpg");
+	SaveColorImage(fused_image,output_name);
 
 	// libero memoria
 	printf("Freeing memory\n");
@@ -98,6 +163,51 @@ int main(int argc, char* argv[])
 */
 	DeleteColorImage(fused_image);
 
+	return 0;
+}
+
+void PrintHelp()
+{
+	printf("\n");
+	PrintVersion(); printf("\n");
+	printf("expofuse: fuses images with exposure fusion algoirithm\n\n");
+	printf("Usage: expofuse [options] <input files>\n");
+	printf("Valid options are:\n");
+	printf("  -o output file name with valid extension. default: 'fused_image.jpg'\n");
+	printf("  -cw contrast weight value as floating point number. default: 1.0\n");
+	printf("  -sw saturation weight value as floating point number. default: 1.0\n");
+	printf("  -ew exposeness weight value as floating point number. default: 1.0\n");
+	printf("  -v display current version\n");
+	printf("  -h display help (this text)\n");
+	printf("\n");
+}
+
+void PrintVersion()
+{
+	printf("expofuse version %d.%d\n",VERSION,SUBVERSION);
+}
+
+const char* CommandOption(int argc, char* argv[], const char* option)
+{
+	int i;
+	for(i=1;i<argc;i++)
+		// if argv matches parameter
+		if (!strcmp(argv[i],option))
+			return argv[i+1];
+	
+	// if parameter doesnt matche any argv return -1
+	return NULL;
+}
+
+int CommandOptionSet(int argc, char* argv[], const char* option)
+{
+	int i;
+	for(i=1;i<argc;i++)
+		// if argv matches parameter
+		if (!strcmp(argv[i],option))
+			return 1;
+	
+	// if parameter doesnt matche any argv return -1
 	return 0;
 }
 
@@ -123,7 +233,7 @@ ColorImage* CopyColorImage(const ColorImage* image)
 	return copy;
 }
 
-Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples)
+Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight)
 {
 	Matrix** grey_images;
 	Matrix** contrast;
@@ -150,7 +260,7 @@ Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_sampl
 
 	weights = malloc(sizeof(Matrix*)*n_samples);
 	forn(k,n_samples)
-		weights[k] = Weight(contrast[k],saturation[k],exposeness[k]);
+		weights[k] = Weight(contrast[k],contrast_weight,saturation[k],saturation_weight,exposeness[k],exposeness_weight);
 	
 	NormalizeWeights(weights,n_samples);
 	
@@ -371,12 +481,13 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 }
 
 ColorImage* LoadColorImage(const char* filename)
-{	
+{
 	int i, j;
 	IplImage* img;
 	Matrix* R; Matrix* G; Matrix* B;
 	ColorImage* I;
 
+	printf("loading image %s\n",filename);
 	img = cvLoadImage(filename,CV_LOAD_IMAGE_UNCHANGED);
 	if(!img)
 	{
@@ -426,6 +537,7 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 		dst[0] = (unsigned char)(ELEM(I->B,i,j)*(ELEM(I->B,i,j)<0?-1:1)*255.0);
 	}
 	
+	printf("saving image %s\n",filename);
 	if(!cvSaveImage(filename,img,0))
 		printf("Could not save: %s\n",filename);
 
@@ -524,7 +636,7 @@ Matrix* Exposeness(const ColorImage* I)
 	return J;
 }
 
-Matrix* Weight(const Matrix* contrast, const Matrix* saturation, const Matrix* exposeness)
+Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* saturation, double saturation_weight, const Matrix* exposeness, double exposeness_weight)
 {
 	int i, j;
 	Matrix* J;
@@ -533,9 +645,9 @@ Matrix* Weight(const Matrix* contrast, const Matrix* saturation, const Matrix* e
 	
 	forn(i,J->rows) forn(j,J->cols)
 		ELEM(J,i,j) =
-			pow(ELEM(contrast,i,j),WC) +
-			pow(ELEM(saturation,i,j),WS) +
-			pow(ELEM(exposeness,i,j),WE);
+			pow(ELEM(contrast,i,j),contrast_weight) +
+			pow(ELEM(saturation,i,j),saturation_weight) +
+			pow(ELEM(exposeness,i,j),exposeness_weight);
 	
 	return J;
 }
