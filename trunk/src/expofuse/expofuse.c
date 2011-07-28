@@ -22,7 +22,7 @@ ColorImage* CopyColorImage(const ColorImage* image)
 	return copy;
 }
 
-Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight)
+Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight, double sigma)
 {
 	Matrix** grey_images;
 	Matrix** contrast;
@@ -45,7 +45,7 @@ Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_sampl
 	
 	exposeness = malloc(sizeof(Matrix*)*n_samples);
 	forn(k,n_samples)
-		exposeness[k] = Exposeness(color_images[k]);
+		exposeness[k] = Exposeness(color_images[k], sigma);
 
 	weights = malloc(sizeof(Matrix*)*n_samples);
 	forn(k,n_samples)
@@ -269,7 +269,7 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	return upsampled;
 }
 
-ColorImage* LoadColorImage(const char* filename)
+ColorImage* LoadColorImage(const char* filename, const int size)
 {
 	int i, j;
 	IplImage* img;
@@ -278,10 +278,24 @@ ColorImage* LoadColorImage(const char* filename)
 
 	printf("loading image %s\n",filename);
 	img = cvLoadImage(filename,CV_LOAD_IMAGE_UNCHANGED);
-	if(!img)
-	{
+	if(!img){
 		printf("Could not load image file: %s\n",filename);
 		exit(0);
+	}
+	
+	if(size>0){
+		int w,h;
+		if(img->height > img->width){
+			h = size;
+			w = img->width * size / img->height;
+		}else{
+			w = size;
+			h = img->height * size / img->width;
+		}
+		IplImage* small=cvCreateImage(cvSize(w,h), img->depth, img->nChannels);
+		cvResize(img, small, CV_INTER_CUBIC);
+		cvReleaseImage(&img);
+		img=small;
 	}
 	
 	I = malloc(sizeof(ColorImage));
@@ -405,9 +419,10 @@ Matrix* Saturation(const ColorImage* I)
 	return J;
 }
 
-Matrix* Exposeness(const ColorImage* I)
+Matrix* Exposeness(const ColorImage* I, double sigma)
 {
 	int i, j;
+	double sigma2 = sigma*sigma;
 	Matrix* J;
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
@@ -415,9 +430,9 @@ Matrix* Exposeness(const ColorImage* I)
 	forn(i,J->rows) forn(j,J->cols)
 	{
 		double ex = 1.0;
-		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / SIGMA2 );
-		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / SIGMA2 );
-		ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / SIGMA2 );
+		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / sigma2 );
+		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / sigma2 );
+		ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / sigma2 );
 		
 		ELEM(J,i,j) = ex;
 	}

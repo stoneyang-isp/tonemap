@@ -84,11 +84,11 @@ int main(int argc, char* argv[])
 	
 	color_images = malloc(sizeof(ColorImage*)*n_samples);
 	forn(k,n_samples)
-		color_images[k] = LoadColorImage(argv[1+extra_parameters+k]);
+		color_images[k] = LoadColorImage(argv[1+extra_parameters+k],0);
 	
 	printf("Generating weights with\n - contrast weight: %f\n - saturation weight %f\n - exposeness weight %f\n",contrast_weight,saturation_weight,exposeness_weight);
 	
-	weights = ConstructWeights(color_images,n_samples,contrast_weight,saturation_weight,exposeness_weight);
+	weights = ConstructWeights(color_images,n_samples,contrast_weight,saturation_weight,exposeness_weight,SIGMA2);
 	
 //	printf("Fusing the naive way\n");
 	
