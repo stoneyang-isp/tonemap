@@ -1,10 +1,14 @@
 GCC = gcc
 
-gui: gui.c
-	gcc -Wall -g gui.c -o gui -lpthread `pkg-config --cflags gtk+-2.0` `pkg-config --libs gtk+-2.0`
 
 fuse: fuse.o expofuse.o Matrix.o
-	$(GCC)  $^ -Wall -g -o $@ `pkg-config --cflags --libs opencv`
+	$(GCC) $^ -Wall -g -o $@ `pkg-config --cflags --libs opencv`
+
+gui: gui.o expofuse.o Matrix.o
+	$(GCC) $^ -Wall -g -o $@ `pkg-config --libs gtk+-2.0 opencv`
+
+gui.o: gui.c expofuse.h
+	$(GCC) -g -Wall -c $< -o $@ -lpthread `pkg-config --cflags gtk+-2.0`
 
 fuse.o: fuse.c expofuse.h Matrix.h
 	$(GCC) -g -Wall -c $< -o $@
