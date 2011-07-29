@@ -29,6 +29,8 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 void PrintMatrix(const Matrix* A);
 void PrintMatrixMatStyle(const Matrix* A);
 
+extern void asmInvertir(Matrix* A);
+
 extern const Matrix LAPLACIAN_KERN_3x3;
 extern const Matrix GAUSS_KERN_5x1;
 extern const Matrix GAUSS_KERN_1x5;
