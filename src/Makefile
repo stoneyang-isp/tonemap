@@ -3,3 +3,6 @@ tonemap: tonemap.cpp
 
 test: tonemap ../images/tito.exr
 	./tonemap ../images/tito.exr
+
+clean:
+	rm -rf tonemap test

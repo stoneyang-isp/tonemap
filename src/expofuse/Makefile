@@ -2,10 +2,10 @@ GCC = gcc
 
 
 fuse: fuse.o expofuse.o Matrix.o asm.o
-	$(GCC) $^ -Wall -g -o $@ `pkg-config --cflags --libs opencv`
+	$(GCC) $^ -Wall -g -o $@ -lopencv_core -lopencv_imgproc -lopencv_highgui
 
 gui: gui.o expofuse.o Matrix.o asm.o
-	$(GCC) $^ -Wall -g -o $@ `pkg-config --libs gtk+-2.0 opencv`
+	$(GCC) $^ -Wall -g -o $@ `pkg-config --cflags --libs gtk+-2.0` -lopencv_core -lopencv_imgproc -lopencv_highgui
 
 test: test.c asm.o expofuse.o Matrix.o
 	$(GCC) -c test.c -o test.o
@@ -24,7 +24,7 @@ Matrix.o: Matrix.c Matrix.h
 	$(GCC) -g -Wall -c $< -o $@
 
 asm.o: asm.asm
-	nasm -felf -o $@ $<
+	nasm -felf64 -o $@ $<
 
 clean:
-	rm -rf *.o
+	rm -rf *.o gui fuse test
