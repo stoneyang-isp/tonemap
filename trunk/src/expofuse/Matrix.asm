@@ -27,12 +27,12 @@ section .text
 
 asmInvertir:
   Entrar            ; Convencion C
-  mov esi,ARG1      ; Cargo en es1 el 1er arg de la funcion
-  mov eax,[esi]     ; eax= A->rows
-  mov ecx,[esi+4]   ; ecx= A->cols
-  mul ecx           ; eax=eax*ecx (cant de celdas)
-  mov ecx,eax       ; ecx=cant celdas
-  mov edi,[esi+8]   ; edi= *(A->data)
+  mov esi, ARG1     ; Cargo en es1 el 1er arg de la funcion
+  mov eax, [esi]    ; eax = A->rows
+  mov ecx, [esi+4]  ; ecx = A->cols
+  mul ecx           ; eax = eax*ecx (cant de celdas)
+  mov ecx, eax      ; ecx = cant celdas
+  mov edi, [esi+8]  ; edi = *(A->data)
   finit
   .loop:
     ;fild dword [C255]
