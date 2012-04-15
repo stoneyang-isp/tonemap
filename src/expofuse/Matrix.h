@@ -20,13 +20,22 @@ typedef struct
 } Matrix;
 
 Matrix* NewMatrix(int rows, int cols);
+
 void DeleteMatrix(Matrix* A);
+
 Matrix* CopyMatrix(const Matrix* A);
+extern Matrix* asmCopyMatrix(const Matrix* A);
+
 Matrix* Substract(const Matrix* A, const Matrix* B);
+
 Matrix* AddMatrix(const Matrix* A, const Matrix* B);
+
 Matrix* AddEqualsMatrix(Matrix* A, const Matrix* B);
+
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound);
+
 void PrintMatrix(const Matrix* A);
+
 void PrintMatrixMatStyle(const Matrix* A);
 
 extern void asmInvertir(Matrix* A);

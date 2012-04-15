@@ -1,13 +1,13 @@
 GCC = gcc
 
 
-fuse: fuse.o expofuse.o Matrix.o asm.o
+fuse: fuse.o expofuse.o Matrix.o
 	$(GCC) $^ -Wall -g -o $@ -lopencv_core -lopencv_imgproc -lopencv_highgui
 
-gui: gui.o expofuse.o Matrix.o asm.o
+gui: gui.o expofuse.o Matrix.o
 	$(GCC) $^ -Wall -g -o $@ `pkg-config --cflags --libs gtk+-2.0` -lopencv_core -lopencv_imgproc -lopencv_highgui
 
-test: test.c asm.o expofuse.o Matrix.o
+test: test.c expofuse.o Matrix.o
 	$(GCC) -c test.c -o test.o
 	$(GCC) $^ -o test `pkg-config --cflags --libs opencv`
 
@@ -20,10 +20,13 @@ fuse.o: fuse.c expofuse.h Matrix.h
 expofuse.o: expofuse.c Matrix.h
 	$(GCC) -g -Wall -c $< -o $@ `pkg-config --cflags opencv`
 
-Matrix.o: Matrix.c Matrix.h
+Matrix.o: asmMatrix.o cMatrix.o
+	ld -r $^ -o $@
+
+cMatrix.o: Matrix.c Matrix.h
 	$(GCC) -g -Wall -c $< -o $@
 
-asm.o: asm.asm
+asmMatrix.o: Matrix.asm
 	nasm -felf64 -o $@ $<
 
 clean:
