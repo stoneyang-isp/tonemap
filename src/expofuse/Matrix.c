@@ -1,4 +1,5 @@
 #include "Matrix.h"
+#include <string.h>
 
 double GAUSS_KERN_5x1_DATA[5] = {0.0625,0.2500,0.3750,0.2500,0.0625};
 const Matrix GAUSS_KERN_5x1 = { .rows=5, .cols=1, .data = GAUSS_KERN_5x1_DATA };
@@ -30,17 +31,8 @@ void DeleteMatrix(Matrix* A)
 
 Matrix* CopyMatrix(const Matrix* A)
 {
-	int i, j;
-	Matrix* C;
-	
-	C = NewMatrix(A->rows,A->cols);
-	
-	forn(i,C->rows) forn(j,C->cols)
-	{
-		int n = i*C->cols + j;
-		C->data[n] = A->data[n];
-	}
-	
+	Matrix* C = NewMatrix(A->rows, A->cols);
+	memcpy(C->data, A->data, sizeof(double)*A->rows*A->cols);
 	return C;
 }
 
@@ -55,14 +47,24 @@ Matrix* Substract(const Matrix* A, const Matrix* B)
 		exit(0);
 	}
 	
-	C = NewMatrix(A->rows,A->cols);
+	C = NewMatrix(A->rows, A->cols);
 	
-	forn(i,C->rows) forn(j,C->cols)
+	forn(i, C->rows) forn(j, C->cols)
 	{
 		int n = i*C->cols + j;
 		C->data[n] = A->data[n] - B->data[n];
 	}
 	
+	return C;
+}
+
+Matrix* asmSubstract(const Matrix* A, const Matrix* B) {
+  if ( A->cols!=B->cols || A->rows!=B->rows )	{
+		printf("Error: Substract - matrix sizes must match!\n");
+		exit(0);
+	}
+	Matrix* C = NewMatrix(A->rows, A->cols);
+	_asmSubstract(A->data, B->data, C->data, A->rows, A->cols);
 	return C;
 }
 

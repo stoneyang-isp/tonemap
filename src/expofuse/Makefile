@@ -9,7 +9,7 @@ gui: gui.o expofuse.o Matrix.o
 
 test: test.c expofuse.o Matrix.o
 	$(GCC) -c test.c -o test.o
-	$(GCC) $^ -o test `pkg-config --cflags --libs opencv`
+	$(GCC) $^ -o test -lopencv_core -lopencv_imgproc -lopencv_highgui
 
 gui.o: gui.c expofuse.h
 	$(GCC) -g -Wall -c $< -o $@ -lpthread `pkg-config --cflags gtk+-2.0`

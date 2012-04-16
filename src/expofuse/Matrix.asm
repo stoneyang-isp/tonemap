@@ -1,46 +1,50 @@
-%define ARG1 [ebp+8]
+%define ARG1 rdi
+%define ARG2 rsi
+%define ARG3 rdx
+%define ARG4 rcx
+%define ARG5 r8
+%define ARG6 r9
 
 %macro Entrar 0
   push rbp
-  mov ebp,esp
-  sub esp, 4
-  push rsi
-  push rdi
+  mov rbp, rsp
+  sub rsp, 8
   push rbx
+  push r12
+  push r15
 %endmacro
 
 %macro Salir 0
+  pop r15
+  pop r12
   pop rbx
-  pop rdi
-  pop rsi
-  add esp, 4
+  add rsp, 8
   pop rbp
   ret
 %endmacro
 
 section .data
-  C255: dd 255      ; constante 255
+
 section .text
 
-  ; void asmInvertir(Matrix* A);
-  global asmInvertir
+  ; Matrix* _asmSubstract(const double* A, const double* B, double* C, int rows, int cols);
+  global _asmSubstract
 
-asmInvertir:
+_asmSubstract:
   Entrar            ; Convencion C
-  mov esi, ARG1     ; Cargo en es1 el 1er arg de la funcion
-  mov eax, [esi]    ; eax = A->rows
-  mov ecx, [esi+4]  ; ecx = A->cols
-  mul ecx           ; eax = eax*ecx (cant de celdas)
-  mov ecx, eax      ; ecx = cant celdas
-  mov edi, [esi+8]  ; edi = *(A->data)
+  mov r10, ARG3     ; ARG3 se va a pisar con el mul
+  mov rax, ARG4     ; rax = rows
+  mul ARG5          ; rax = rows*cols
+  mov rcx, rax      ; rcx = total celdas
   finit
   .loop:
-    ;fild dword [C255]
-    fld1
-    fld qword [edi]
+    fld qword [ARG1]
+    fld qword [ARG2]
     fsub
-    fst qword [edi]
+    fst qword [r10]
     ffree
-    lea edi,[edi+8]
+    lea ARG1, [ARG1+8]
+    lea ARG2, [ARG2+8]
+    lea r10, [r10+8]
     loop .loop
   Salir
