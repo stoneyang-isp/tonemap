@@ -24,9 +24,10 @@ Matrix* NewMatrix(int rows, int cols);
 void DeleteMatrix(Matrix* A);
 
 Matrix* CopyMatrix(const Matrix* A);
-extern Matrix* asmCopyMatrix(const Matrix* A);
 
 Matrix* Substract(const Matrix* A, const Matrix* B);
+Matrix* asmSubstract(const Matrix* A, const Matrix* B);
+extern Matrix* _asmSubstract(const double* A, const double* B, const double* C, int rows, int cols);
 
 Matrix* AddMatrix(const Matrix* A, const Matrix* B);
 
@@ -37,8 +38,6 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 void PrintMatrix(const Matrix* A);
 
 void PrintMatrixMatStyle(const Matrix* A);
-
-extern void asmInvertir(Matrix* A);
 
 extern const Matrix LAPLACIAN_KERN_3x3;
 extern const Matrix GAUSS_KERN_5x1;
