@@ -11,7 +11,7 @@ Matrix C = { .rows=3, .cols=3, .data = Cdata };
 
 int main(int argc, char* argv[]){
   printf("%li\n", (long)C.data);
-  printf("%li\n", (long)_asmSubstract(A.data, B.data, C.data, 3, 3));
-  PrintMatrix(&C);
+  printf("%li\n", (long)_asmAddEqualsMatrix(A.data, B.data, 3, 3));
+  PrintMatrix(&A);
 	return 0;
 }
