@@ -30,8 +30,12 @@ Matrix* asmSubstract(const Matrix* A, const Matrix* B);
 extern Matrix* _asmSubstract(const double* A, const double* B, const double* C, int rows, int cols);
 
 Matrix* AddMatrix(const Matrix* A, const Matrix* B);
+Matrix* asmAddMatrix(const Matrix* A, const Matrix* B);
+extern Matrix* _asmAddMatrix(const double* A, const double* B, const double* C, int rows, int cols);
 
 Matrix* AddEqualsMatrix(Matrix* A, const Matrix* B);
+Matrix* asmAddEqualsMatrix(Matrix* A, const Matrix* B);
+extern Matrix* _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
 
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound);
 
