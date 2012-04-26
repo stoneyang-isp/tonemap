@@ -12,7 +12,6 @@ int main(int argc, char* argv[])
 	int k, n_samples;
 	Matrix** weights;
 	ColorImage** color_images;
-//	ColorImage* naive_fused_image;
 	ColorImage* fused_image;
 	int extra_parameters = 0;
 	const char* output_name = "fused_image.jpg";
@@ -20,8 +19,7 @@ int main(int argc, char* argv[])
 	double saturation_weight = DEFAULT_SATURATION_WEIGHT;
 	double exposeness_weight = DEFAULT_EXPOSENESS_WEIGHT;
 	
-	if(argc<2)
-	{
+	if (argc<2) {
 		printf("\n");
 		printf("Error: At least one input image is required as argument\n");
 		PrintHelp();
@@ -31,64 +29,58 @@ int main(int argc, char* argv[])
 	const char* option;
 	
 	// if version is required, print and exit program
-	if ( CommandOptionSet(argc,argv,"-v") )
-	{
+	if (CommandOptionSet(argc, argv, "-v")) {
 		PrintVersion();
 		extra_parameters += 1;
 		return 0;
 	}
 	
 	// if help is required, print and exit program
-	if ( CommandOptionSet(argc,argv,"-h") )
-	{
+	if ( CommandOptionSet(argc, argv, "-h") ) {
 		PrintHelp();
 		extra_parameters += 1;
 		return 0;
 	}
 	
 	// if output name is given
-	option = CommandOption(argc,argv,"-o");
-	if (option)
-	{
+	option = CommandOption(argc, argv, "-o");
+	if (option) {
 		output_name = option;
 		extra_parameters += 2;
 	}
 	
 	// if contrast weight is given
-	option = CommandOption(argc,argv,"-cw");
-	if (option)
-	{
-		contrast_weight = strtod(option,NULL);
+	option = CommandOption(argc, argv, "-cw");
+	if (option) {
+		contrast_weight = strtod(option, NULL);
 		extra_parameters += 2;
 	}
 	
 	// if saturation weight is given
-	option = CommandOption(argc,argv,"-sw");
-	if (option)
-	{
-		saturation_weight = strtod(option,NULL);
+	option = CommandOption(argc, argv, "-sw");
+	if (option) {
+		saturation_weight = strtod(option, NULL);
 		extra_parameters += 2;
 	}
 	
 	// if exposeness weight is given
-	option = CommandOption(argc,argv,"-ew");
-	if (option)
-	{
-		exposeness_weight = strtod(option,NULL);
+	option = CommandOption(argc, argv, "-ew");
+	if (option) {
+		exposeness_weight = strtod(option, NULL);
 		extra_parameters += 2;
 	}
 	
 	n_samples = argc-1-extra_parameters;
 	
-	printf("Loading %d images\n",n_samples);
+	printf("Loading %d images\n", n_samples);
 	
-	color_images = malloc(sizeof(ColorImage*)*n_samples);
+	color_images = malloc(sizeof(ColorImage*) * n_samples);
 	forn(k,n_samples)
-		color_images[k] = LoadColorImage(argv[1+extra_parameters+k],0);
+		color_images[k] = LoadColorImage(argv[1+extra_parameters+k], 0);
 	
-	printf("Generating weights with\n - contrast weight: %f\n - saturation weight %f\n - exposeness weight %f\n",contrast_weight,saturation_weight,exposeness_weight);
+	printf("Generating weights with\n - contrast weight: %f\n - saturation weight %f\n - exposeness weight %f\n", contrast_weight, saturation_weight, exposeness_weight);
 	
-	weights = ConstructWeights(color_images,n_samples,contrast_weight,saturation_weight,exposeness_weight,SIGMA2);
+	weights = ConstructWeights(color_images, n_samples, contrast_weight, saturation_weight, exposeness_weight, SIGMA2);
 	
 //	printf("Fusing the naive way\n");
 	
@@ -120,8 +112,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void PrintHelp()
-{
+void PrintHelp() {
 	printf("\n");
 	PrintVersion(); printf("\n");
 	printf("expofuse: fuses overlapping images with exposure fusion algoirithm\n\n");
@@ -136,13 +127,11 @@ void PrintHelp()
 	printf("\n");
 }
 
-void PrintVersion()
-{
+void PrintVersion() {
 	printf("expofuse version %d.%d\n",VERSION,SUBVERSION);
 }
 
-const char* CommandOption(int argc, char* argv[], const char* option)
-{
+const char* CommandOption(int argc, char* argv[], const char* option) {
 	int i;
 	for(i=1;i<argc;i++)
 		// if argv matches parameter
@@ -153,14 +142,14 @@ const char* CommandOption(int argc, char* argv[], const char* option)
 	return NULL;
 }
 
-int CommandOptionSet(int argc, char* argv[], const char* option)
-{
+int CommandOptionSet(int argc, char* argv[], const char* option) {
 	int i;
-	for(i=1;i<argc;i++)
+	for(i=1; i<argc; i++) {
 		// if argv matches parameter
 		if (!strcmp(argv[i],option))
 			return 1;
+	}
 	
-	// if parameter doesnt matche any argv return -1
+	// if parameter doesnt match any argv return 0
 	return 0;
 }

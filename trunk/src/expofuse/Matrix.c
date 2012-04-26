@@ -161,6 +161,65 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 	return C;
 }
 
+// TODO: ASM
+Matrix* Downsample(const Matrix* I) {
+	Matrix* aux;
+	Matrix* convolved;
+	Matrix* downsampled;
+	
+	aux = Convolve(I, &GAUSS_KERN_5x1, SYMMETRIC);
+	convolved = Convolve(aux, &GAUSS_KERN_1x5, SYMMETRIC);
+	DeleteMatrix(aux);
+	
+	downsampled = NewMatrix(I->rows/2, I->cols/2);
+	
+	/*int i, j;
+	forn(i,downsampled->rows) forn(j,downsampled->cols)
+		ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);*/
+  _asmDownsample(downsampled->data, convolved->data, downsampled->rows, downsampled->cols, convolved->cols);
+	
+	DeleteMatrix(convolved);
+	
+	return downsampled;
+}
+
+// TODO: ASM
+Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
+{
+	int i, j;
+	Matrix* aux;
+	Matrix* upsampled;
+	
+	if ((odd_rows!=1 && odd_rows!=0) || (odd_cols!=1 && odd_cols!=0)) {
+		printf("Error: Upsample - odd_rows: %d odd_cols: %d\n", odd_rows,odd_cols);
+		exit(0);
+	}
+	
+	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
+	
+	forn(i, I->rows) forn(j, I->cols) {
+		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
+		ELEM(upsampled,2*i,2*j+1) = 0;
+		ELEM(upsampled,2*i+1,2*j) = 0;
+		ELEM(upsampled,2*i+1,2*j+1) = 0;
+	}
+	
+	if (odd_rows)
+		forn(j,upsampled->cols)
+			ELEM(upsampled,upsampled->rows-1,j) = ELEM(upsampled,upsampled->rows-3,j);
+	
+	if (odd_cols)
+		forn(i,upsampled->rows)
+			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
+	
+	aux = Convolve(upsampled,&GAUSS_KERN_5x1,SYMMETRIC);
+	DeleteMatrix(upsampled);
+	upsampled = Convolve(aux,&GAUSS_KERN_1x5,SYMMETRIC);
+	DeleteMatrix(aux);
+	
+	return upsampled;
+}
+
 void PrintMatrix(const Matrix* A) {
 	int i, j;
 	for(i=0;i<A->rows;i++) {

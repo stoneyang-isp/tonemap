@@ -36,6 +36,9 @@ section .text
 
   ; Matrix* _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
   global _asmAddEqualsMatrix
+  
+  ; Matrix* _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
+  global _asmDownsample
 
 _asmSubstractFPU:
   Entrar            ; Convencion C
@@ -126,4 +129,26 @@ _asmAddEqualsMatrix:
     lea ARG1, [ARG1+16]
     lea ARG2, [ARG2+16];   i+=2; RCX-=2
     loop .loop         ; }
+  Salir
+
+_asmDownsample:
+  Entrar                  ; Convencion C
+  mov r12, ARG4           ; r12 = cols
+  mov r13, ARG5           ; r13 = Bcols
+  shl r13, 4              ; r13 = 2*8*Bcols (2 filas)
+  mov rcx, ARG3           ; rcx = rows
+  mov rbx, ARG2           ; rbx = B
+  .loopRows:
+    push rcx
+    mov rcx, r12          ; rcx = cols
+    .loopCols:
+      mov r14, [ARG2]
+      mov [ARG1], r14     ; A[i][j] = B[2*i][2*j]
+      lea ARG1, [ARG1+8]  ; ARG1 += 1 (ARG1 = A[i][j])
+      lea ARG2, [ARG2+16] ; ARG2 += 2 (ARG2 = B[2*i][2*j])
+      loop .loopCols
+    pop rcx
+    add rbx, r13          ; rbx += 2 filas (rbx = B[2*i])
+    mov ARG2, rbx         ; ARG2 = B[2*i]
+    loop .loopRows
   Salir
