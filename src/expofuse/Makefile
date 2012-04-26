@@ -17,8 +17,14 @@ gui.o: gui.c expofuse.h
 fuse.o: fuse.c expofuse.h Matrix.h
 	$(GCC) -g -Wall -c $< -o $@
 
-expofuse.o: expofuse.c Matrix.h
+expofuse.o: cExpofuse.o asmExpofuse.o
+	ld -r $^ -o $@
+
+cExpofuse.o: expofuse.c Matrix.h asmExpofuse.o
 	$(GCC) -g -Wall -c $< -o $@ `pkg-config --cflags opencv`
+
+asmExpofuse.o: expofuse.asm
+	nasm -felf64 -o $@ $<
 
 Matrix.o: asmMatrix.o cMatrix.o
 	ld -r $^ -o $@

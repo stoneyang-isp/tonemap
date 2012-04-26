@@ -39,6 +39,10 @@ extern Matrix* _asmAddEqualsMatrix(double* A, const double* B, int rows, int col
 
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound);
 
+Matrix* Downsample(const Matrix* I);
+
+Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
+
 void PrintMatrix(const Matrix* A);
 
 void PrintMatrixMatStyle(const Matrix* A);

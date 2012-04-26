@@ -36,8 +36,8 @@ ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B);
 ColorImage* LoadColorImage(const char* filename, const int size);
 void SaveColorImage(const ColorImage* I, const char* filename);
 void TruncateColorImage(ColorImage* I);
-Matrix* LoadGrayscaleImage(const char* filename);
-void SaveGrayscaleImage(const Matrix* I, const char* filename);
+// Matrix* LoadGrayscaleImage(const char* filename);
+// void SaveGrayscaleImage(const Matrix* I, const char* filename);
 Matrix* DesaturateImage(const ColorImage* I);
 Matrix* Contrast(const Matrix* I);
 Matrix* Saturation(const ColorImage* I);
@@ -50,8 +50,6 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels);
 Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels);
 ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* I, const int levels);
-Matrix* Downsample(const Matrix* I);
-Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
 ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels);
 
 #endif

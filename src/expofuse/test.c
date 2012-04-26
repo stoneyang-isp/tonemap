@@ -10,8 +10,14 @@ Matrix B = { .rows=3, .cols=3, .data = Bdata };
 Matrix C = { .rows=3, .cols=3, .data = Cdata };
 
 int main(int argc, char* argv[]){
-  printf("%li\n", (long)C.data);
-  printf("%li\n", (long)_asmAddEqualsMatrix(A.data, B.data, 3, 3));
-  PrintMatrix(&A);
+  int i;
+  Matrix* D = NewMatrix(3, 3);
+  for(i=0; i<3*3; i++) D->data[i] = 2.;
+  Matrix* U = NewMatrix(7, 7);
+  for(i=0; i<7*7; i++) U->data[i] = i+1;
+  PrintMatrix(D);
+  PrintMatrix(U);
+  printf("%li\n", (long)_asmDownsample(D->data, U->data, 3, 3, 7));
+  PrintMatrix(D);
 	return 0;
 }

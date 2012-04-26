@@ -75,55 +75,53 @@ ColorImage* AddColorImage(const ColorImage* A, const ColorImage* B)
 	ColorImage* C;
 	C = NewColorImage();
 	
-	C->R = AddMatrix(A->R,B->R);
-	C->G = AddMatrix(A->G,B->G);
-	C->B = AddMatrix(A->B,B->B);
+	C->R = asmAddMatrix(A->R,B->R);
+	C->G = asmAddMatrix(A->G,B->G);
+	C->B = asmAddMatrix(A->B,B->B);
 	
 	return C;
 }
 
 ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B)
 {
-	AddEqualsMatrix(A->R,B->R);
-	AddEqualsMatrix(A->G,B->G);
-	AddEqualsMatrix(A->B,B->B);
+	asmAddEqualsMatrix(A->R,B->R);
+	asmAddEqualsMatrix(A->G,B->G);
+	asmAddEqualsMatrix(A->B,B->B);
 	
 	return A;
 }
 
-Matrix* LoadGrayscaleImage(const char* filename)
+/*Matrix* LoadGrayscaleImage(const char* filename)
 {
 	int i, j;
 	IplImage* img;
 	Matrix* C;
 
 	img = cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
-	if(!img)
-	{
+	if(!img) {
 		printf("Could not load image file: %s\n",filename);
 		exit(0);
 	}
 	C = NewMatrix(img->height,img->width);
-	
-	for(i=0;i<C->rows;i++) for(j=0;j<C->cols;j++)
-	{
+
+	// TODO: ASM
+	for(i=0;i<C->rows;i++) for(j=0;j<C->cols;j++) {
 		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j);
-		
 		ELEM(C,i,j) = (double)(src[0]/255.0);
 	}
 	
 	return C;
-}
+}*/
 
-void SaveGrayscaleImage(const Matrix* I, const char* filename)
+/*void SaveGrayscaleImage(const Matrix* I, const char* filename)
 {
 	int i, j;
 	
 	IplImage* img;
 	img = cvCreateImage(cvSize(I->cols,I->rows), IPL_DEPTH_8U, 1);
-	
-	for(i=0;i<I->rows;i++) for(j=0;j<I->cols;j++)
-	{
+
+	// TODO: ASM
+	for(i=0;i<I->rows;i++) for(j=0;j<I->cols;j++) {
 		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j);
 		dst[0] = (unsigned char)(ELEM(I,i,j)*(ELEM(I,i,j)<0?-1:1)*255.0);
 	}
@@ -132,10 +130,9 @@ void SaveGrayscaleImage(const Matrix* I, const char* filename)
 		printf("Could not save: %s\n",filename);
 
 	cvReleaseImage(&img);
-}
+}*/
 
-Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels)
-{
+Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels) {
 	int k;
 	Matrix** pyramid;
 	
@@ -144,34 +141,12 @@ Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels)
 	// copio el primer nivel como la imagen original
 	pyramid[0] = CopyMatrix(I);
 	
-	for (k=1;k<levels;k++)
-	{
+	for (k=1; k<levels; k++) {
 		I = Downsample(I);
 		pyramid[k] = I;
 	}
 	
 	return pyramid;
-}
-
-Matrix* Downsample(const Matrix* I)
-{
-	int i, j;
-	Matrix* aux;
-	Matrix* convolved;
-	Matrix* downsampled;
-	
-	aux = Convolve(I,&GAUSS_KERN_5x1,SYMMETRIC);
-	convolved = Convolve(aux,&GAUSS_KERN_1x5,SYMMETRIC);
-	
-	downsampled = NewMatrix(I->rows/2,I->cols/2);
-	
-	forn(i,downsampled->rows) forn(j,downsampled->cols)
-		ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);
-	
-	DeleteMatrix(aux);
-	DeleteMatrix(convolved);
-	
-	return downsampled;
 }
 
 ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* color_image, const int n_levels)
@@ -187,8 +162,7 @@ ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* color_image, const int 
 	B_pyramid = LaplacianPyramid(color_image->B,n_levels);
 	
 	pyramid = malloc(sizeof(ColorImage*)*n_levels);
-	forn(k,n_levels)
-	{
+	forn(k, n_levels) {
 		pyramid[k] = NewColorImage();
 		pyramid[k]->R = R_pyramid[k];
 		pyramid[k]->G = G_pyramid[k];
@@ -209,15 +183,14 @@ Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
 	pyramid = malloc(sizeof(Matrix*)*levels);
 	
 	current_level = CopyMatrix(I);
-	for (k=0;k<levels-1;k++)
-	{
+	for (k=0; k<levels-1; k++) {
 		downsampled = Downsample(current_level);
 		
 		int odd_rows = current_level->rows - 2*downsampled->rows;
 		int odd_cols = current_level->cols - 2*downsampled->cols;
 		
 		aux = Upsample(downsampled,odd_rows,odd_cols);
-		pyramid[k] = Substract(current_level,aux);
+		pyramid[k] = asmSubstract(current_level, aux);
 		
 		// free some memory
 		DeleteMatrix(current_level);
@@ -229,44 +202,6 @@ Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
 	pyramid[levels-1] = current_level;
 	
 	return pyramid;
-}
-
-Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
-{
-	int i, j;
-	Matrix* aux;
-	Matrix* upsampled;
-	
-	if ((odd_rows!=1 && odd_rows!=0) || (odd_cols!=1 && odd_cols!=0))
-	{
-		printf("Error: Upsample - odd_rows: %d odd_cols: %d\n",odd_rows,odd_cols);
-		exit(0);
-	}
-	
-	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
-	
-	forn(i,I->rows) forn(j,I->cols)
-	{
-		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
-		ELEM(upsampled,2*i,2*j+1) = 0;
-		ELEM(upsampled,2*i+1,2*j) = 0;
-		ELEM(upsampled,2*i+1,2*j+1) = 0;
-	}
-	
-	if (odd_rows)
-		forn(j,upsampled->cols)
-			ELEM(upsampled,upsampled->rows-1,j) = ELEM(upsampled,upsampled->rows-3,j);
-	
-	if (odd_cols)
-		forn(i,upsampled->rows)
-			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
-	
-	aux = Convolve(upsampled,&GAUSS_KERN_5x1,SYMMETRIC);
-	DeleteMatrix(upsampled);
-	upsampled = Convolve(aux,&GAUSS_KERN_1x5,SYMMETRIC);
-	DeleteMatrix(aux);
-	
-	return upsampled;
 }
 
 ColorImage* LoadColorImage(const char* filename, const int size)
@@ -283,7 +218,7 @@ ColorImage* LoadColorImage(const char* filename, const int size)
 		exit(0);
 	}
 	
-	if(size>0){
+	if(size>0) {
 		int w,h;
 		if(img->height > img->width){
 			h = size;
@@ -304,8 +239,8 @@ ColorImage* LoadColorImage(const char* filename, const int size)
 	G = NewMatrix(img->height,img->width); I->G = G;
 	B = NewMatrix(img->height,img->width); I->B = B;
 	
-	for(i=0;i<R->rows;i++) for(j=0;j<R->cols;j++)
-	{
+	// TODO: ASM
+	for(i=0; i < R->rows; i++) for(j=0; j < R->cols; j++) {
 		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
 		
 		ELEM(B,i,j) = (double)(src[0]/255.0);
@@ -325,8 +260,8 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 	IplImage* img;
 	img = cvCreateImage(cvSize(I->R->cols,I->R->rows), IPL_DEPTH_8U, 3);
 	
-	forn(i,I->R->rows) forn(j,I->R->cols)
-	{
+	// TODO: ASM
+	forn(i, I->R->rows) forn(j, I->R->cols) {
 		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
 		
 		if ( ELEM(I->R,i,j)<0 || ELEM(I->G,i,j)<0 || ELEM(I->B,i,j)<0 )
@@ -351,6 +286,7 @@ void TruncateColorImage(ColorImage* I)
 {
 	int i, j;
 	
+	// TODO: ASM
 	forn(i,I->R->rows) forn(j,I->R->cols)
 	{
 		if ( ELEM(I->R,i,j)<0 ) ELEM(I->R,i,j)=0;
@@ -371,6 +307,7 @@ Matrix* DesaturateImage(const ColorImage* color_image)
 
 	J = NewMatrix(color_image->R->rows,color_image->R->cols);
 	
+	// TODO: ASM
 	forn(i,J->rows) forn(j,J->cols)
 		ELEM(J,i,j) = (
 			ELEM(color_image->R,i,j)*0.299 +
@@ -386,8 +323,9 @@ Matrix* Contrast(const Matrix* I)
 	int i, j;
 	Matrix* J;
 	
-	J = Convolve(I,&LAPLACIAN_KERN_3x3,REPLICATE);
+	J = Convolve(I, &LAPLACIAN_KERN_3x3, REPLICATE);
 	
+	// TODO: ASM
 	forn(i,J->rows) forn(j,J->cols)
 		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;
 	
@@ -401,8 +339,8 @@ Matrix* Saturation(const ColorImage* I)
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	forn(i,J->rows) forn(j,J->cols)
-	{
+	// TODO: ASM
+	forn(i,J->rows) forn(j,J->cols) {
 		double r = ELEM(I->R,i,j);
 		double g = ELEM(I->G,i,j);
 		double b = ELEM(I->B,i,j);
@@ -427,8 +365,8 @@ Matrix* Exposeness(const ColorImage* I, double sigma)
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	forn(i,J->rows) forn(j,J->cols)
-	{
+	// TODO: ASM
+	forn(i,J->rows) forn(j,J->cols) {
 		double ex = 1.0;
 		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / sigma2 );
 		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / sigma2 );
@@ -447,6 +385,7 @@ Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* sat
 	
 	J = NewMatrix(contrast->rows,contrast->cols);
 	
+	// TODO: ASM
 	forn(i,J->rows) forn(j,J->cols)
 		ELEM(J,i,j) =
 			pow(ELEM(contrast,i,j),contrast_weight) +
@@ -460,8 +399,8 @@ void NormalizeWeights(Matrix** weights, const int n_samples)
 {
 	int i, j, k;
 	
-	forn(i,weights[0]->rows) forn(j,weights[0]->cols)
-	{
+	// TODO: ASM
+	forn(i, weights[0]->rows) forn(j, weights[0]->cols) {
 		double sum = exp(-12);;
 		
 		forn(k,n_samples)
@@ -476,8 +415,8 @@ void WeightColorImage(const ColorImage* color_image, const Matrix* weights)
 {
 	int i, j;
 	
-	forn(i,weights->rows) forn(j,weights->cols)
-	{
+	// TODO: ASM
+	forn(i, weights->rows) forn(j, weights->cols) {
 		ELEM(color_image->R,i,j) *= ELEM(weights,i,j);
 		ELEM(color_image->G,i,j) *= ELEM(weights,i,j);
 		ELEM(color_image->B,i,j) *= ELEM(weights,i,j);
@@ -498,8 +437,8 @@ ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** 
 	G = NewMatrix(rows,cols); fusioned_image->G = G;
 	B = NewMatrix(rows,cols); fusioned_image->B = B;
 	
-	forn(i,rows) forn(j,cols)
-	{
+	// TODO: ASM
+	forn(i, rows) forn(j, cols) {
 		ELEM(R,i,j) = 0;
 		ELEM(G,i,j) = 0;
 		ELEM(B,i,j) = 0;
@@ -525,15 +464,13 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 	
 	fused_pyramid = malloc(sizeof(ColorImage*)*n_levels);
 	
-	forn(i,n_samples)
-	{
+	forn(i,n_samples) {
 		// construyo piramide por cada imagen
 		Matrix** weight_gauss_pyramid = GaussianPyramid(weights[i],n_levels);
 		ColorImage** laplacian_image_pyramid = ColorLaplacianPyramid(color_images[i],n_levels);
 		
 		// agrego cada nivel al resultado compuesto
-		forn(j,n_levels)
-		{
+		forn(j, n_levels) {
 			WeightColorImage(laplacian_image_pyramid[j],weight_gauss_pyramid[j]);
 			if (i==0)
 				fused_pyramid[j] = CopyColorImage(laplacian_image_pyramid[j]);
@@ -586,9 +523,9 @@ ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels)
 			DeleteColorImage(color_image);
 		color_image = NewColorImage();
 		
-		color_image->R = AddMatrix(pyramid[k]->R,aux_r);
-		color_image->G = AddMatrix(pyramid[k]->G,aux_g);
-		color_image->B = AddMatrix(pyramid[k]->B,aux_b);
+		color_image->R = asmAddMatrix(pyramid[k]->R, aux_r);
+		color_image->G = asmAddMatrix(pyramid[k]->G, aux_g);
+		color_image->B = asmAddMatrix(pyramid[k]->B, aux_b);
 		
 		DeleteMatrix(aux_r);
 		DeleteMatrix(aux_g);
