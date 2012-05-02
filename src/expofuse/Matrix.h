@@ -27,19 +27,22 @@ Matrix* CopyMatrix(const Matrix* A);
 
 Matrix* Substract(const Matrix* A, const Matrix* B);
 Matrix* asmSubstract(const Matrix* A, const Matrix* B);
-extern Matrix* _asmSubstract(const double* A, const double* B, const double* C, int rows, int cols);
+extern void _asmSubstract(const double* A, const double* B, const double* C, int rows, int cols);
 
 Matrix* AddMatrix(const Matrix* A, const Matrix* B);
 Matrix* asmAddMatrix(const Matrix* A, const Matrix* B);
-extern Matrix* _asmAddMatrix(const double* A, const double* B, const double* C, int rows, int cols);
+extern void _asmAddMatrix(const double* A, const double* B, const double* C, int rows, int cols);
 
 Matrix* AddEqualsMatrix(Matrix* A, const Matrix* B);
 Matrix* asmAddEqualsMatrix(Matrix* A, const Matrix* B);
-extern Matrix* _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
+extern void _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
 
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound);
+Matrix* ConvolveGauss1x5(const Matrix* A);
+extern void _asmConvolve1x5(const double* A, double* C, int rows, int cols, const double* kern);
 
 Matrix* Downsample(const Matrix* I);
+extern void _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
 
 Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
 
