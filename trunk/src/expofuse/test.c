@@ -18,7 +18,7 @@ int main(int argc, char* argv[]){
   for(i=0; i<7*7; i++) U->data[i] = i+1;
   Matrix* U2 = NewMatrix(7, 7);
   PrintMatrix(U); printf("\n");
-  _asmConvolve1x5(U->data, U2->data, 7, 7, GAUSS_KERN_1x5.data);
+  _asmConvolve1x5Symm(U->data, U2->data, 7, 7, GAUSS_KERN_1x5.data);
   Matrix* U3 = Convolve(U, &GAUSS_KERN_1x5, SYMMETRIC);
   printf("U2\n");PrintMatrix(U2);
   printf("\nU3\n");PrintMatrix(U3);
