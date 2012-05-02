@@ -42,6 +42,7 @@ section .text
   
   ; _asmConvolve1x5(const double* A, double* C, int rows, int cols, const double* kern);
   global _asmConvolve1x5
+  global _asmConvolve1x5Symm
 
 _asmSubstractFPU:
   Entrar            ; Convencion C
@@ -185,4 +186,100 @@ _asmConvolve1x5:
     lea ARG1, [ARG1+8]
     lea ARG2, [ARG2+8] ;   i++
     loop .loop         ; rcx--; }
+  Salir
+
+_asmConvolve1x5Symm:
+  Entrar                  ; Convencion C
+  mov r12, ARG4           ; r12 = cols
+  mov r13, r12
+  shl r13, 3              ; r13 = 8*cols (1 fila)
+  mov rcx, ARG3           ; rcx = rows
+  mov rbx, ARG2           ; rbx = C
+  mov rax, ARG1           ; rax = A
+  movupd xmm1, [ARG5]
+  lea ARG5, [ARG5+16]
+  movupd xmm2, [ARG5]
+  lea ARG5, [ARG5+16]
+  movsd xmm3, [ARG5]      ; xmm1:xmm2:xmm3 = kern
+  .loopRows:
+    movlpd xmm4, [ARG1+16]
+    movhpd xmm4, [ARG1+8]
+    movupd xmm5, [ARG1]
+    movsd xmm6, [ARG1+16] ; xmm4:xmm5:xmm6 = A[2],A[1],A[0],A[1],A[2]
+
+    mulpd xmm4, xmm1
+    mulpd xmm5, xmm2
+    mulsd xmm6, xmm3
+    addsd xmm4, xmm6
+    haddpd xmm4, xmm5
+    haddpd xmm4, xmm4  ;   xmm4 = sum(A[..] x KERN):..
+    movsd [ARG2], xmm4
+
+    movlpd xmm4, [ARG1+8]
+    movhpd xmm4, [ARG1]
+    movupd xmm5, [ARG1+8]
+    movsd xmm6, [ARG1+24] ; xmm4:xmm5:xmm6 = A[1],A[0],A[1],A[2],A[3]
+    
+    mulpd xmm4, xmm1
+    mulpd xmm5, xmm2
+    mulsd xmm6, xmm3
+    addsd xmm4, xmm6
+    haddpd xmm4, xmm5
+    haddpd xmm4, xmm4  ;   xmm4 = sum(A[..] x KERN):..
+    movsd [ARG2+8], xmm4
+    
+    lea ARG2, [ARG2+16]
+    push rcx
+    mov rcx, r12          ; rcx = cols
+    sub rcx, 4
+    .loopCols:
+      movupd xmm4, [ARG1]
+      movupd xmm5, [ARG1+16]
+      movsd xmm6, [ARG1+32] ; xmm4:xmm5:xmm6 = A[0],A[1],A[2],A[3],A[4]
+
+      mulpd xmm4, xmm1
+      mulpd xmm5, xmm2
+      mulsd xmm6, xmm3
+      addsd xmm4, xmm6
+      haddpd xmm4, xmm5
+      haddpd xmm4, xmm4  ;   xmm4 = sum(A[..] x KERN):..
+      movsd [ARG2], xmm4
+      
+      lea ARG1, [ARG1+8]
+      lea ARG2, [ARG2+8]
+      loop .loopCols
+    
+    pop rcx
+    
+    movupd xmm4, [ARG1]
+    movupd xmm5, [ARG1+16]
+    movsd xmm6, [ARG1+16] ; xmm4:xmm5:xmm6 = A[-3],A[-2],A[-1],A[0],A[-1]
+
+    mulpd xmm4, xmm1
+    mulpd xmm5, xmm2
+    mulsd xmm6, xmm3
+    addsd xmm4, xmm6
+    haddpd xmm4, xmm5
+    haddpd xmm4, xmm4  ;   xmm4 = sum(A[..] x KERN):..
+    movsd [ARG2], xmm4
+
+    movupd xmm4, [ARG1+8]
+    movlpd xmm5, [ARG1+24]
+    movhpd xmm5, [ARG1+16]
+    movsd xmm6, [ARG1+8] ; xmm4:xmm5:xmm6 = A[-2],A[-1],A[0],A[-1],A[-2]
+    
+    mulpd xmm4, xmm1
+    mulpd xmm5, xmm2
+    mulsd xmm6, xmm3
+    addsd xmm4, xmm6
+    haddpd xmm4, xmm5
+    haddpd xmm4, xmm4  ;   xmm4 = sum(A[..] x KERN):..
+    movsd [ARG2+8], xmm4
+    
+    add rbx, r13
+    mov ARG2, rbx
+    add rax, r13
+    mov ARG1, rax
+    dec rcx
+    jnz .loopRows ;loop .loopRows
   Salir

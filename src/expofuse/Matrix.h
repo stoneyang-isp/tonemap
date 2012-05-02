@@ -40,6 +40,7 @@ extern void _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
 Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bound);
 Matrix* ConvolveGauss1x5(const Matrix* A);
 extern void _asmConvolve1x5(const double* A, double* C, int rows, int cols, const double* kern);
+extern void _asmConvolve1x5Symm(const double* A, double* C, int rows, int cols, const double* kern);
 
 Matrix* Downsample(const Matrix* I);
 extern void _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);

@@ -163,7 +163,7 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 
 Matrix* ConvolveGauss1x5(const Matrix* A) {
 	Matrix* C = NewMatrix(A->rows, A->cols);
-	_asmConvolve1x5(A->data, C->data, A->rows, A->cols, GAUSS_KERN_1x5.data);
+	_asmConvolve1x5Symm(A->data, C->data, A->rows, A->cols, GAUSS_KERN_1x5.data);
 	return C;
 }
 
