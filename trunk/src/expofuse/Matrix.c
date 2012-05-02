@@ -161,14 +161,19 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 	return C;
 }
 
-// TODO: ASM
+Matrix* ConvolveGauss1x5(const Matrix* A) {
+	Matrix* C = NewMatrix(A->rows, A->cols);
+	_asmConvolve1x5(A->data, C->data, A->rows, A->cols, GAUSS_KERN_1x5.data);
+	return C;
+}
+
 Matrix* Downsample(const Matrix* I) {
 	Matrix* aux;
 	Matrix* convolved;
 	Matrix* downsampled;
 	
 	aux = Convolve(I, &GAUSS_KERN_5x1, SYMMETRIC);
-	convolved = Convolve(aux, &GAUSS_KERN_1x5, SYMMETRIC);
+	convolved = ConvolveGauss1x5(aux); // Convolve(aux, &GAUSS_KERN_1x5, SYMMETRIC);
 	DeleteMatrix(aux);
 	
 	downsampled = NewMatrix(I->rows/2, I->cols/2);
@@ -212,9 +217,9 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 		forn(i,upsampled->rows)
 			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
 	
-	aux = Convolve(upsampled,&GAUSS_KERN_5x1,SYMMETRIC);
+	aux = Convolve(upsampled, &GAUSS_KERN_5x1, SYMMETRIC);
 	DeleteMatrix(upsampled);
-	upsampled = Convolve(aux,&GAUSS_KERN_1x5,SYMMETRIC);
+	upsampled = ConvolveGauss1x5(aux); //Convolve(aux,&GAUSS_KERN_1x5,SYMMETRIC);
 	DeleteMatrix(aux);
 	
 	return upsampled;

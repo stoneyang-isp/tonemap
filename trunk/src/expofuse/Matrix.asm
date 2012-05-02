@@ -28,17 +28,20 @@ section .data
 
 section .text
 
-  ; Matrix* _asmSubstract(const double* A, const double* B, double* C, int rows, int cols);
+  ; _asmSubstract(const double* A, const double* B, double* C, int rows, int cols);
   global _asmSubstract
 
-  ; Matrix* _asmAddMatrix(const double* A, const double* B, double* C, int rows, int cols);
+  ; _asmAddMatrix(const double* A, const double* B, double* C, int rows, int cols);
   global _asmAddMatrix
 
-  ; Matrix* _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
+  ; _asmAddEqualsMatrix(double* A, const double* B, int rows, int cols);
   global _asmAddEqualsMatrix
   
-  ; Matrix* _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
+  ; _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
   global _asmDownsample
+  
+  ; _asmConvolve1x5(const double* A, double* C, int rows, int cols, const double* kern);
+  global _asmConvolve1x5
 
 _asmSubstractFPU:
   Entrar            ; Convencion C
@@ -151,4 +154,35 @@ _asmDownsample:
     add rbx, r13          ; rbx += 2 filas (rbx = B[2*i])
     mov ARG2, rbx         ; ARG2 = B[2*i]
     loop .loopRows
+  Salir
+
+_asmConvolve1x5:
+  Entrar               ; Convencion C
+  mov rax, ARG3        ; rax = rows
+  mul ARG4             ; rax = rows*cols
+  mov rcx, rax
+  sub rcx, 4           ; rcx = total celdas - 4
+  lea ARG2, [ARG2+16]  ; (empezamos de la posicion 3 en C)
+  movupd xmm1, [ARG5]
+  lea ARG5, [ARG5+16]
+  movupd xmm2, [ARG5]
+  lea ARG5, [ARG5+16]
+  movsd xmm3, [ARG5]   ; xmm1:xmm2:xmm3 = kern
+  .loop:               ; while (rcx) {
+    mov r12, ARG1
+    movupd xmm4, [r12]
+    lea r12, [r12+16]
+    movupd xmm5, [r12]
+    lea r12, [r12+16]
+    movsd xmm6, [r12]  ;   xmm4:xmm5:xmm6 = A[i]...A[i+5]
+    mulpd xmm4, xmm1
+    mulpd xmm5, xmm2
+    mulsd xmm6, xmm3   ;   xmm4:xmm5:xmm6 = A[i]...A[i+5] x KERN
+    addsd xmm4, xmm6
+    haddpd xmm4, xmm5
+    haddpd xmm4, xmm4  ;   xmm4 = sum(A[i..i+5] x KERN):..
+    movsd [ARG2], xmm4
+    lea ARG1, [ARG1+8]
+    lea ARG2, [ARG2+8] ;   i++
+    loop .loop         ; rcx--; }
   Salir
