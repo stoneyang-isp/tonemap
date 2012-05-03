@@ -385,7 +385,6 @@ Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* sat
 	
 	J = NewMatrix(contrast->rows,contrast->cols);
 	
-	// TODO: ASM
 	forn(i,J->rows) forn(j,J->cols)
 		ELEM(J,i,j) =
 			pow(ELEM(contrast,i,j),contrast_weight) +
