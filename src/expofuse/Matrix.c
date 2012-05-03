@@ -191,7 +191,6 @@ Matrix* Downsample(const Matrix* I) {
 // TODO: ASM
 Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 {
-	int i, j;
 	Matrix* aux;
 	Matrix* upsampled;
 	
@@ -203,7 +202,8 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
 	
 	_asmUpsample(I->data, upsampled->data, I->rows, I->cols, upsampled->rows, upsampled->cols);
-	/*forn(i, I->rows) forn(j, I->cols) {
+	/*int i, j;
+	forn(i, I->rows) forn(j, I->cols) {
 		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
 		ELEM(upsampled,2*i,2*j+1) = 0;
 		ELEM(upsampled,2*i+1,2*j) = 0;
