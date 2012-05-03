@@ -360,21 +360,20 @@ Matrix* Saturation(const ColorImage* I)
 
 Matrix* Exposeness(const ColorImage* I, double sigma)
 {
-	int i, j;
 	double sigma2 = sigma*sigma;
 	Matrix* J;
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	// TODO: ASM
+	_asmExposeness(J->data, I->R->data, I->R->data, I->R->data, J->rows, J->cols, sigma2);
+	/*int i, j;
 	forn(i,J->rows) forn(j,J->cols) {
 		double ex = 1.0;
 		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / sigma2 );
 		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / sigma2 );
 		ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / sigma2 );
-		
 		ELEM(J,i,j) = ex;
-	}
+	}*/
 	
 	return J;
 }
@@ -402,7 +401,7 @@ void NormalizeWeights(Matrix** weights, const int n_samples)
 	
 	// TODO: ASM
 	forn(i, weights[0]->rows) forn(j, weights[0]->cols) {
-		double sum = exp(-12);;
+		double sum = exp(-12);
 		
 		forn(k,n_samples)
 			sum += ELEM(weights[k],i,j);
@@ -438,7 +437,6 @@ ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** 
 	G = NewMatrix(rows,cols); fusioned_image->G = G;
 	B = NewMatrix(rows,cols); fusioned_image->B = B;
 	
-	// TODO: ASM
 	forn(i, rows) forn(j, cols) {
 		ELEM(R,i,j) = 0;
 		ELEM(G,i,j) = 0;
