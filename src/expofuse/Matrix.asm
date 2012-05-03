@@ -39,6 +39,9 @@ section .text
   
   ; _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
   global _asmDownsample
+
+  ; _asmUpsample(const double* I, double* upsampled, int rows, int cols, int Urows, int Ucols);
+  global _asmUpsample
   
   ; _asmConvolve1x5(const double* A, double* C, int rows, int cols, const double* kern);
   global _asmConvolve1x5
@@ -154,6 +157,48 @@ _asmDownsample:
     pop rcx
     add rbx, r13          ; rbx += 2 filas (rbx = B[2*i])
     mov ARG2, rbx         ; ARG2 = B[2*i]
+    loop .loopRows
+  Salir
+
+_asmUpsample:
+  Entrar                  ; Convencion C
+  mov r13, ARG4
+  mov rax, ARG5           ; rax = Urows
+  mul ARG6                ; rax = Urows * Ucols
+  mov rcx, rax
+  mov rdx, ARG2
+  
+  ; poner upsampled en 0
+  ; (los bordes tmb, si es odd (!))
+  subpd xmm1, xmm1
+  shr rcx, 1
+  jnc .loopZero
+    movsd [rdx], xmm1
+    lea rdx, [rdx+8]
+  .loopZero:
+    movupd [rdx], xmm1
+    lea rdx, [rdx+16]
+    loop .loopZero
+
+  ; upsampled[2*i, 2*j] = I[i, j]
+  shl ARG6, 4
+  mov r14, 4
+  cvtsi2sd xmm1, r14
+  mov rcx, ARG3
+  mov rdx, ARG2
+  .loopRows:
+    push rcx
+    mov rcx, r13
+    .loopCols:
+      movsd xmm2, [ARG1]
+      mulsd xmm2, xmm1
+      movsd [rdx], xmm2
+      lea rdx, [rdx+16]
+      lea ARG1, [ARG1+8]
+      loop .loopCols
+    add ARG2, ARG6
+    mov rdx, ARG2
+    pop rcx
     loop .loopRows
   Salir
 
