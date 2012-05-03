@@ -239,7 +239,6 @@ ColorImage* LoadColorImage(const char* filename, const int size)
 	G = NewMatrix(img->height,img->width); I->G = G;
 	B = NewMatrix(img->height,img->width); I->B = B;
 	
-	// TODO: ASM
 	for(i=0; i < R->rows; i++) for(j=0; j < R->cols; j++) {
 		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
 		
@@ -260,7 +259,6 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 	IplImage* img;
 	img = cvCreateImage(cvSize(I->R->cols,I->R->rows), IPL_DEPTH_8U, 3);
 	
-	// TODO: ASM
 	forn(i, I->R->rows) forn(j, I->R->cols) {
 		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j*img->nChannels);
 		
@@ -284,11 +282,14 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 
 void TruncateColorImage(ColorImage* I)
 {
-	int i, j;
+  int rows = I->R->rows;
+  int cols = I->R->cols;
+	_asmTruncate(I->R->data, rows, cols);
+	_asmTruncate(I->G->data, rows, cols);
+	_asmTruncate(I->B->data, rows, cols);
 	
-	// TODO: ASM
-	forn(i,I->R->rows) forn(j,I->R->cols)
-	{
+	/*int i, j;
+	forn(i,I->R->rows) forn(j,I->R->cols) {
 		if ( ELEM(I->R,i,j)<0 ) ELEM(I->R,i,j)=0;
 		if ( 1<ELEM(I->R,i,j) ) ELEM(I->R,i,j)=1;
 		
@@ -297,7 +298,7 @@ void TruncateColorImage(ColorImage* I)
 		
 		if ( ELEM(I->B,i,j)<0 ) ELEM(I->B,i,j)=0;
 		if ( 1<ELEM(I->B,i,j) ) ELEM(I->B,i,j)=1;
-	}
+	}*/
 }
 
 Matrix* DesaturateImage(const ColorImage* color_image)
