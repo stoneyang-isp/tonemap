@@ -321,14 +321,14 @@ Matrix* DesaturateImage(const ColorImage* color_image)
 
 Matrix* Contrast(const Matrix* I)
 {
-	int i, j;
 	Matrix* J;
 	
 	J = Convolve(I, &LAPLACIAN_KERN_3x3, REPLICATE);
 	
-	// TODO: ASM
+	_asmAbs(J->data, J->rows, J->cols);
+	/*int i, j;
 	forn(i,J->rows) forn(j,J->cols)
-		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;
+		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;*/
 	
 	return J;
 }
