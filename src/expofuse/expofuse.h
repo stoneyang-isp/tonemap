@@ -51,6 +51,7 @@ extern void _asmTruncate(double* A, int rows, int cols);
 // void SaveGrayscaleImage(const Matrix* I, const char* filename);
 
 Matrix* DesaturateImage(const ColorImage* I);
+extern void _asmDesaturate(double* J, const double* R, const double* G, const double* B, int rows, int cols);
 
 Matrix* Contrast(const Matrix* I);
 
