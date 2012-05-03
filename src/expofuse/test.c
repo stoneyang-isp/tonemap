@@ -15,7 +15,7 @@ int main(int argc, char* argv[]){
   Matrix* D = NewMatrix(3, 3);
   for(i=0; i<3*3; i++) D->data[i] = (i-4.5)*.3;
   printf("D\n");PrintMatrix(D);
-  _asmTruncate(D->data, 3, 3);
+  _asmAbs(D->data, 3, 3);
   printf("D\n");PrintMatrix(D);
 	return 0;
 }
