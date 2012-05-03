@@ -303,18 +303,18 @@ void TruncateColorImage(ColorImage* I)
 
 Matrix* DesaturateImage(const ColorImage* color_image)
 {
-	int i, j;
 	Matrix* J;
 
 	J = NewMatrix(color_image->R->rows,color_image->R->cols);
 	
-	// TODO: ASM
+	_asmDesaturate(J->data, color_image->R->data, color_image->G->data, color_image->B->data, J->rows, J->cols);
+	/*int i, j;
 	forn(i,J->rows) forn(j,J->cols)
 		ELEM(J,i,j) = (
 			ELEM(color_image->R,i,j)*0.299 +
 			ELEM(color_image->G,i,j)*0.587 +
 			ELEM(color_image->B,i,j)*0.114
-		);
+		);*/
 	
 	return J;
 }
