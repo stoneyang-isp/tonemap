@@ -57,6 +57,7 @@ Matrix* Contrast(const Matrix* I);
 extern void _asmAbs(double* A, int rows, int cols);
 
 Matrix* Saturation(const ColorImage* I);
+extern void _asmSaturation(double* A, const double* R, const double* G, const double* B, int rows, int cols);
 
 Matrix* Exposeness(const ColorImage* I, double sigma);
 

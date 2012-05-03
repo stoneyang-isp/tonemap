@@ -335,12 +335,12 @@ Matrix* Contrast(const Matrix* I)
 
 Matrix* Saturation(const ColorImage* I)
 {
-	int i, j;
 	Matrix* J;
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	// TODO: ASM
+	_asmSaturation(J->data, I->R->data, I->G->data, I->B->data, J->rows, J->cols);
+	/*int i, j;
 	forn(i,J->rows) forn(j,J->cols) {
 		double r = ELEM(I->R,i,j);
 		double g = ELEM(I->G,i,j);
@@ -353,7 +353,7 @@ Matrix* Saturation(const ColorImage* I)
 		double sd = sqrt( ( pow(r-mu,2) + pow(g-mu,2) + pow(b-mu,2) ) / 3 );
 		
 		ELEM(J,i,j) = sd;
-	}
+	}*/
 	
 	return J;
 }
