@@ -202,7 +202,8 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	
 	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
 	
-	forn(i, I->rows) forn(j, I->cols) {
+	_asmUpsample(I->data, upsampled->data, I->rows, I->cols, upsampled->rows, upsampled->cols);
+	/*forn(i, I->rows) forn(j, I->cols) {
 		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
 		ELEM(upsampled,2*i,2*j+1) = 0;
 		ELEM(upsampled,2*i+1,2*j) = 0;
@@ -215,7 +216,7 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	
 	if (odd_cols)
 		forn(i,upsampled->rows)
-			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
+			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);*/
 	
 	aux = Convolve(upsampled, &GAUSS_KERN_5x1, SYMMETRIC);
 	DeleteMatrix(upsampled);

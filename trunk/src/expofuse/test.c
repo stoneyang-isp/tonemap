@@ -17,10 +17,28 @@ int main(int argc, char* argv[]){
   Matrix* U = NewMatrix(7, 7);
   for(i=0; i<7*7; i++) U->data[i] = i+1;
   Matrix* U2 = NewMatrix(7, 7);
-  PrintMatrix(U); printf("\n");
-  _asmConvolve1x5Symm(U->data, U2->data, 7, 7, GAUSS_KERN_1x5.data);
-  Matrix* U3 = Convolve(U, &GAUSS_KERN_1x5, SYMMETRIC);
-  printf("U2\n");PrintMatrix(U2);
-  printf("\nU3\n");PrintMatrix(U3);
+  PrintMatrix(D); printf("\n");
+  _asmUpsample(D->data, U->data, 3, 3, 7, 7);
+  printf("U\n");PrintMatrix(U);
+  
+  int odd_rows = 1;
+  int odd_cols = 1;
+  Matrix* upsampled = NewMatrix(2*D->rows+odd_rows,2*D->cols+odd_cols);
+  int j;
+  forn(i, D->rows) forn(j, D->cols) {
+		ELEM(upsampled,2*i,2*j) = 4*ELEM(D,i,j);
+		ELEM(upsampled,2*i,2*j+1) = 0;
+		ELEM(upsampled,2*i+1,2*j) = 0;
+		ELEM(upsampled,2*i+1,2*j+1) = 0;
+	}
+	
+	if (odd_rows)
+		forn(j,upsampled->cols)
+			ELEM(upsampled,upsampled->rows-1,j) = ELEM(upsampled,upsampled->rows-3,j);
+	
+	if (odd_cols)
+		forn(i,upsampled->rows)
+			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
+  printf("ups\n");PrintMatrix(upsampled);
 	return 0;
 }

@@ -46,6 +46,7 @@ Matrix* Downsample(const Matrix* I);
 extern void _asmDownsample(double* A, const double* B, int Arows, int Acols, int Bcols);
 
 Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
+extern void _asmUpsample(const double* I, double* upsampled, int rows, int cols, int Urows, int Ucols);
 
 void PrintMatrix(const Matrix* A);
 
