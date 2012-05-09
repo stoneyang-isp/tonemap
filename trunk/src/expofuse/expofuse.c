@@ -218,8 +218,8 @@ ColorImage* LoadColorImage(const char* filename, const int size)
 		exit(0);
 	}
 	
+	int w,h;
 	if(size>0) {
-		int w,h;
 		if(img->height > img->width){
 			h = size;
 			w = img->width * size / img->height;
@@ -227,11 +227,14 @@ ColorImage* LoadColorImage(const char* filename, const int size)
 			w = size;
 			h = img->height * size / img->width;
 		}
-		IplImage* small=cvCreateImage(cvSize(w,h), img->depth, img->nChannels);
-		cvResize(img, small, CV_INTER_CUBIC);
-		cvReleaseImage(&img);
-		img=small;
+	} else {
+    w = img->width;
+	  h = img->height;
 	}
+	IplImage* small=cvCreateImage(cvSize(w,h), img->depth, img->nChannels);
+	cvResize(img, small, CV_INTER_CUBIC);
+	cvReleaseImage(&img);
+	img=small;
 	
 	I = malloc(sizeof(ColorImage));
 	
@@ -396,11 +399,12 @@ Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* sat
 
 void NormalizeWeights(Matrix** weights, const int n_samples)
 {
-	int i, j, k;
-	
+	double expm12 = exp(-12);
+
 	// TODO: ASM
+	int i, j, k;
 	forn(i, weights[0]->rows) forn(j, weights[0]->cols) {
-		double sum = exp(-12);
+		double sum = expm12;
 		
 		forn(k,n_samples)
 			sum += ELEM(weights[k],i,j);
