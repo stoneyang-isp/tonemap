@@ -9,6 +9,7 @@ typedef struct{
 	GtkWidget *file_chooser;
 	GtkWidget *window;
 	GtkWidget *button;
+	GtkWidget *exportbutton;
 	GtkWidget *table;
 	GtkWidget *vbox;
 	GtkWidget *imagen;
@@ -17,13 +18,15 @@ typedef struct{
 	GtkWidget *s_saturation;
 	GtkWidget *s_exposeness;
 	GtkWidget *s_sigma;
+	GSList    *files;
 	//pthread_t worker;
 	
 	int k, n_samples;
+	char* folder;
 	Matrix** weights;
 	ColorImage* fused_image;
 	ColorImage** color_images;
-	ColorImage** color_images_small;
+	ColorImage** color_images_large;
 	const char* output_name;
 	double contrast_weight;
 	double saturation_weight;
@@ -95,6 +98,49 @@ static void update(GtkWidget *widget, GUI* gui){
 	pthread_join(gui->worker,NULL);*/
 }
 
+void file_large(GFile* f, GUI* gui){
+	gui->color_images_large[gui->k] = LoadColorImage(g_file_get_path(f), 0);
+	gui->k++;
+}
+static void export(GtkWidget *widget, GUI* gui){
+  Matrix** weights;
+  ColorImage* fused_image;
+  update(gui->window, gui);
+  GtkWidget *dialog;
+     
+  dialog = gtk_file_chooser_dialog_new ("Save File", NULL,
+      GTK_FILE_CHOOSER_ACTION_SAVE,
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+      GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT, NULL);
+  gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+  if (gui->folder) gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), gui->folder);
+  gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), "fused_image.jpg");
+
+  if (gtk_dialog_run(GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
+    char *filename;
+    filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+    printf("Exporting as: %s\n", filename);
+    
+    // Load Large Images
+    gui->color_images_large = malloc(sizeof(ColorImage*)*gui->n_samples);
+    gui->k = 0;
+		g_slist_foreach(gui->files, (GFunc)file_large, gui);
+		
+		// Fuse
+		weights = ConstructWeights(gui->color_images_large, gui->n_samples,
+        gui->contrast_weight, gui->saturation_weight, gui->exposeness_weight, gui->sigma);
+	  fused_image = Fusion(gui->color_images_large, weights, gui->n_samples);
+	  TruncateColorImage(fused_image);
+	  
+	  // Save
+	  SaveColorImage(fused_image, filename);
+
+    g_free(filename);
+  }
+
+  gtk_widget_destroy (dialog);
+}
+
 void file(GFile* f, GUI* gui){
 	//g_print("%s\n",  g_file_get_path(f));
 	gui->color_images[gui->k] = LoadColorImage(g_file_get_path(f), 460);
@@ -103,15 +149,16 @@ void file(GFile* f, GUI* gui){
 void choose_file(GtkDialog *dialog,gint resp, GUI* gui){
 	if(resp==GTK_RESPONSE_CANCEL) gtk_main_quit();
 	else{
-		GSList* files = gtk_file_chooser_get_files(GTK_FILE_CHOOSER(dialog));
-		gui->n_samples = g_slist_length(files);
-		gui->color_images = malloc(sizeof(ColorImage*)*gui->n_samples);
+		gui->files = gtk_file_chooser_get_files(GTK_FILE_CHOOSER(dialog));
+		gui->folder = gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog));
+		gui->n_samples = g_slist_length(gui->files);
 		gui->k=0;
 	
-		g_slist_foreach(files, (GFunc)file, gui);
+		gui->color_images = malloc(sizeof(ColorImage*)*gui->n_samples);
+		g_slist_foreach(gui->files, (GFunc)file, gui);
 		gtk_widget_destroy(GTK_WIDGET(dialog));
 
-		gui->img =    gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, gui->color_images[0]->R->cols, gui->color_images[0]->R->rows);
+		gui->img = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, gui->color_images[0]->R->cols, gui->color_images[0]->R->rows);
 		gui->imagen = gtk_image_new_from_pixbuf(gui->img);
 		gtk_container_add(GTK_CONTAINER(gui->vbox), gui->imagen);
 		gtk_container_add(GTK_CONTAINER(gui->vbox), gui->table);
@@ -149,6 +196,7 @@ int main(int argc, char *argv[]){
 
 	gui.window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gui.button = gtk_button_new_with_label("Update");
+	gui.exportbutton = gtk_button_new_with_label("Export");
 	gui.s_contrast   =  gtk_hscale_new_with_range(0., 2., .01); gtk_range_set_value(GTK_RANGE(gui.s_contrast), 1.); gtk_scale_set_value_pos(GTK_SCALE(gui.s_contrast), GTK_POS_LEFT);
 	gui.s_saturation =  gtk_hscale_new_with_range(0., 2., .01); gtk_range_set_value(GTK_RANGE(gui.s_saturation), 1.); gtk_scale_set_value_pos(GTK_SCALE(gui.s_saturation), GTK_POS_LEFT);
 	gui.s_exposeness =  gtk_hscale_new_with_range(0., 2., .01); gtk_range_set_value(GTK_RANGE(gui.s_exposeness), 1.); gtk_scale_set_value_pos(GTK_SCALE(gui.s_exposeness), GTK_POS_LEFT);
@@ -157,6 +205,7 @@ int main(int argc, char *argv[]){
 	g_signal_connect(gui.window, "delete-event", G_CALLBACK(delete_event), &gui);
 	g_signal_connect(gui.window, "destroy", G_CALLBACK(destroy), &gui);
 	g_signal_connect(gui.button, "clicked", G_CALLBACK(update), &gui);
+	g_signal_connect(gui.exportbutton, "clicked", G_CALLBACK(export), &gui);
 
 	gtk_container_set_border_width(GTK_CONTAINER(gui.window), 10);
 	gui.vbox = gtk_vbox_new(FALSE,10);
@@ -176,7 +225,8 @@ int main(int argc, char *argv[]){
 	gtk_table_attach(GTK_TABLE(gui.table), gui.s_exposeness, 1, 2, 2, 3, GTK_EXPAND|GTK_FILL, GTK_EXPAND|GTK_FILL, 10, 3);
 	gtk_table_attach(GTK_TABLE(gui.table), sigma     ,       0, 1, 3, 4, GTK_FILL, GTK_FILL, 10, 3);
 	gtk_table_attach(GTK_TABLE(gui.table), gui.s_sigma     , 1, 2, 3, 4, GTK_EXPAND|GTK_FILL, GTK_EXPAND|GTK_FILL, 10, 3);
-	gtk_table_attach(GTK_TABLE(gui.table), gui.button,       2, 3, 0, 4, GTK_FILL, GTK_EXPAND|GTK_FILL, 14, 14);
+	gtk_table_attach(GTK_TABLE(gui.table), gui.button,       2, 3, 0, 2, GTK_FILL, GTK_EXPAND|GTK_FILL, 8, 8);
+	gtk_table_attach(GTK_TABLE(gui.table), gui.exportbutton, 2, 3, 2, 4, GTK_FILL, GTK_EXPAND|GTK_FILL, 8, 8);
 
 	//gtk_widget_show_all(gui.window);
 
