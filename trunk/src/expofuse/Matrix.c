@@ -1,5 +1,6 @@
 #include "Matrix.h"
 #include <string.h>
+#include <math.h>
 
 double GAUSS_KERN_5x1_DATA[5] = {0.0625,0.2500,0.3750,0.2500,0.0625};
 const Matrix GAUSS_KERN_5x1 = { .rows=5, .cols=1, .data = GAUSS_KERN_5x1_DATA };
@@ -188,7 +189,6 @@ Matrix* Downsample(const Matrix* I) {
 	return downsampled;
 }
 
-// TODO: ASM
 Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 {
 	Matrix* aux;
@@ -224,6 +224,17 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	DeleteMatrix(aux);
 	
 	return upsampled;
+}
+
+void ContrastCurve(Matrix* A, double strength) {
+  // y = x + strength * sin(-2*pi*x)
+  int i, j;
+  strength *= .15;
+  forn(i, A->rows) forn(j, A->cols) {
+		int n = i * A->cols + j;
+		double val = A->data[n];
+		A->data[n] = val + strength * sin(-6.28318531 * val);
+	}
 }
 
 void PrintMatrix(const Matrix* A) {

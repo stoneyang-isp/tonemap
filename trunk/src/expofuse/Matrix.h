@@ -48,6 +48,8 @@ extern void _asmDownsample(double* A, const double* B, int Arows, int Acols, int
 Matrix* Upsample(const Matrix* I, const int odd_rows, const int odd_cols);
 extern void _asmUpsample(const double* I, double* upsampled, int rows, int cols, int Urows, int Ucols);
 
+void ContrastCurve(Matrix* A, double strength);
+
 void PrintMatrix(const Matrix* A);
 
 void PrintMatrixMatStyle(const Matrix* A);
