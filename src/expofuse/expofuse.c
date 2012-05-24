@@ -31,16 +31,16 @@ Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_sampl
 	Matrix** weights;
 	int k;
 	
-	grey_images = malloc(sizeof(Matrix*)*n_samples);
-	forn(k,n_samples)
+	grey_images = malloc(sizeof(Matrix*) * n_samples);
+	forn(k, n_samples)
 		grey_images[k] = DesaturateImage(color_images[k]);
 	
-	contrast = malloc(sizeof(Matrix*)*n_samples);
-	forn(k,n_samples)
+	contrast = malloc(sizeof(Matrix*) * n_samples);
+	forn(k, n_samples)
 		contrast[k] = Contrast(grey_images[k]);
 	
-	saturation = malloc(sizeof(Matrix*)*n_samples);
-	forn(k,n_samples)
+	saturation = malloc(sizeof(Matrix*) * n_samples);
+	forn(k, n_samples)
 		saturation[k] = Saturation(color_images[k]);
 	
 	exposeness = malloc(sizeof(Matrix*)*n_samples);
@@ -48,10 +48,11 @@ Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_sampl
 		exposeness[k] = Exposeness(color_images[k], sigma);
 
 	weights = malloc(sizeof(Matrix*)*n_samples);
-	forn(k,n_samples)
-		weights[k] = Weight(contrast[k],contrast_weight,saturation[k],saturation_weight,exposeness[k],exposeness_weight);
+	forn(k, n_samples)
+		weights[k] = Weight(contrast[k], contrast_weight, saturation[k],
+		                    saturation_weight, exposeness[k], exposeness_weight);
 	
-	NormalizeWeights(weights,n_samples);
+	NormalizeWeights(weights, n_samples);
 	
 	// Free memory
 	
@@ -90,47 +91,6 @@ ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B)
 	
 	return A;
 }
-
-/*Matrix* LoadGrayscaleImage(const char* filename)
-{
-	int i, j;
-	IplImage* img;
-	Matrix* C;
-
-	img = cvLoadImage(filename,CV_LOAD_IMAGE_GRAYSCALE);
-	if(!img) {
-		printf("Could not load image file: %s\n",filename);
-		exit(0);
-	}
-	C = NewMatrix(img->height,img->width);
-
-	// TODO: ASM
-	for(i=0;i<C->rows;i++) for(j=0;j<C->cols;j++) {
-		unsigned char* src = (unsigned char*)(img->imageData + i*img->widthStep + j);
-		ELEM(C,i,j) = (double)(src[0]/255.0);
-	}
-	
-	return C;
-}*/
-
-/*void SaveGrayscaleImage(const Matrix* I, const char* filename)
-{
-	int i, j;
-	
-	IplImage* img;
-	img = cvCreateImage(cvSize(I->cols,I->rows), IPL_DEPTH_8U, 1);
-
-	// TODO: ASM
-	for(i=0;i<I->rows;i++) for(j=0;j<I->cols;j++) {
-		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j);
-		dst[0] = (unsigned char)(ELEM(I,i,j)*(ELEM(I,i,j)<0?-1:1)*255.0);
-	}
-	
-	if(!cvSaveImage(filename,img,0))
-		printf("Could not save: %s\n",filename);
-
-	cvReleaseImage(&img);
-}*/
 
 Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels) {
 	int k;
@@ -334,6 +294,12 @@ Matrix* Contrast(const Matrix* I)
 		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;*/
 	
 	return J;
+}
+
+void SContrast(ColorImage* A, double strength) {
+	ContrastCurve(A->R, strength);
+	ContrastCurve(A->G, strength);
+	ContrastCurve(A->B, strength);
 }
 
 Matrix* Saturation(const ColorImage* I)
