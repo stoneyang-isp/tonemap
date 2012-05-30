@@ -34,7 +34,6 @@ Matrix* CopyMatrix(const Matrix* A) {
 }
 
 Matrix* Substract(const Matrix* A, const Matrix* B) {
-	int i, j;
 	Matrix* C;
 
 	if (A->cols != B->cols || A->rows != B->rows) {
@@ -44,26 +43,20 @@ Matrix* Substract(const Matrix* A, const Matrix* B) {
 
 	C = NewMatrix(A->rows, A->cols);
 
-	forn(i, C->rows) forn(j, C->cols) {
-		int n = i*C->cols + j;
-		C->data[n] = A->data[n] - B->data[n];
-	}
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i, C->rows) forn(j, C->cols) {
+		  int n = i*C->cols + j;
+		  C->data[n] = A->data[n] - B->data[n];
+	  }
+	#else
+	  _asmSubstract(A->data, B->data, C->data, A->rows, A->cols);
+	#endif
 
-	return C;
-}
-
-Matrix* asmSubstract(const Matrix* A, const Matrix* B) {
-  if ( A->cols!=B->cols || A->rows!=B->rows )	{
-		printf("Error: Substract - matrix sizes must match!\n");
-		exit(0);
-	}
-	Matrix* C = NewMatrix(A->rows, A->cols);
-	_asmSubstract(A->data, B->data, C->data, A->rows, A->cols);
 	return C;
 }
 
 Matrix* AddMatrix(const Matrix* A, const Matrix* B) {
-	int i, j;
 	Matrix* C;
 
 	if ( A->cols!=B->cols || A->rows!=B->rows ) {
@@ -73,46 +66,35 @@ Matrix* AddMatrix(const Matrix* A, const Matrix* B) {
 
 	C = NewMatrix(A->rows,A->cols);
 
-	forn(i,C->rows) forn(j,C->cols) {
-		int n = i*C->cols + j;
-		C->data[n] = A->data[n] + B->data[n];
-	}
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,C->rows) forn(j,C->cols) {
+		  int n = i*C->cols + j;
+		  C->data[n] = A->data[n] + B->data[n];
+	  }
+	#else
+	  _asmAddMatrix(A->data, B->data, C->data, A->rows, A->cols);
+	#endif
 	
 	return C;
 }
 
-Matrix* asmAddMatrix(const Matrix* A, const Matrix* B) {
-  if ( A->cols!=B->cols || A->rows!=B->rows )	{
-		printf("Error: Add - matrix sizes must match!\n");
-		exit(0);
-	}
-	Matrix* C = NewMatrix(A->rows, A->cols);
-	_asmAddMatrix(A->data, B->data, C->data, A->rows, A->cols);
-	return C;
-}
-
 Matrix* AddEqualsMatrix(Matrix* A, const Matrix* B) {
-	int i, j;
-
 	if ( A->cols!=B->cols || A->rows!=B->rows ) {
 		printf("Error: AddEquals - matrix sizes must match!\n");
 		exit(0);
 	}
 
-	forn(i,A->rows) forn(j,A->cols) {
-		int n = i*A->cols + j;
-		A->data[n] += B->data[n];
-	}
+  #ifdef NO_ASM
+	  int i, j;
+	  forn(i,A->rows) forn(j,A->cols) {
+		  int n = i*A->cols + j;
+		  A->data[n] += B->data[n];
+	  }
+	#else
+	  _asmAddEqualsMatrix(A->data, B->data, A->rows, A->cols);
+	#endif
 
-	return A;
-}
-
-Matrix* asmAddEqualsMatrix(Matrix* A, const Matrix* B) {
-  if ( A->cols!=B->cols || A->rows!=B->rows )	{
-		printf("Error: AddEquals - matrix sizes must match!\n");
-		exit(0);
-	}
-	_asmAddEqualsMatrix(A->data, B->data, A->rows, A->cols);
 	return A;
 }
 
@@ -163,8 +145,12 @@ Matrix* Convolve(const Matrix* A, const Matrix* kernel, const BOUNDARY_OPTION bo
 }
 
 Matrix* ConvolveGauss1x5(const Matrix* A) {
-	Matrix* C = NewMatrix(A->rows, A->cols);
-	_asmConvolve1x5Symm(A->data, C->data, A->rows, A->cols, GAUSS_KERN_1x5.data);
+	#ifdef NO_ASM
+    Matrix* C = Convolve(A, &GAUSS_KERN_1x5, SYMMETRIC);
+	#else
+	  Matrix* C = NewMatrix(A->rows, A->cols);
+	  _asmConvolve1x5Symm(A->data, C->data, A->rows, A->cols, GAUSS_KERN_1x5.data);
+	#endif
 	return C;
 }
 
@@ -179,10 +165,13 @@ Matrix* Downsample(const Matrix* I) {
 	
 	downsampled = NewMatrix(I->rows/2, I->cols/2);
 	
-	/*int i, j;
-	forn(i,downsampled->rows) forn(j,downsampled->cols)
-		ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);*/
-  _asmDownsample(downsampled->data, convolved->data, downsampled->rows, downsampled->cols, convolved->cols);
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,downsampled->rows) forn(j,downsampled->cols)
+		  ELEM(downsampled,i,j) = ELEM(convolved,2*i,2*j);
+	#else
+    _asmDownsample(downsampled->data, convolved->data, downsampled->rows, downsampled->cols, convolved->cols);
+	#endif
 	
 	DeleteMatrix(convolved);
 	
@@ -201,22 +190,25 @@ Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
 	
 	upsampled = NewMatrix(2*I->rows+odd_rows,2*I->cols+odd_cols);
 	
-	_asmUpsample(I->data, upsampled->data, I->rows, I->cols, upsampled->rows, upsampled->cols);
-	/*int i, j;
-	forn(i, I->rows) forn(j, I->cols) {
-		ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
-		ELEM(upsampled,2*i,2*j+1) = 0;
-		ELEM(upsampled,2*i+1,2*j) = 0;
-		ELEM(upsampled,2*i+1,2*j+1) = 0;
-	}
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i, I->rows) forn(j, I->cols) {
+		  ELEM(upsampled,2*i,2*j) = 4*ELEM(I,i,j);
+		  ELEM(upsampled,2*i,2*j+1) = 0;
+		  ELEM(upsampled,2*i+1,2*j) = 0;
+		  ELEM(upsampled,2*i+1,2*j+1) = 0;
+	  }
 	
-	if (odd_rows)
-		forn(j,upsampled->cols)
-			ELEM(upsampled,upsampled->rows-1,j) = ELEM(upsampled,upsampled->rows-3,j);
+	  if (odd_rows)
+		  forn(j,upsampled->cols)
+			  ELEM(upsampled,upsampled->rows-1,j) = ELEM(upsampled,upsampled->rows-3,j);
 	
-	if (odd_cols)
-		forn(i,upsampled->rows)
-			ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);*/
+	  if (odd_cols)
+		  forn(i,upsampled->rows)
+			  ELEM(upsampled,i,upsampled->cols-1) = ELEM(upsampled,i,upsampled->cols-3);
+	#else
+  	_asmUpsample(I->data, upsampled->data, I->rows, I->cols, upsampled->rows, upsampled->cols);
+	#endif
 	
 	aux = Convolve(upsampled, &GAUSS_KERN_5x1, SYMMETRIC);
 	DeleteMatrix(upsampled);

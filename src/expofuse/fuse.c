@@ -1,4 +1,5 @@
 #include "opencv/cv.h"
+#include <time.h>
 
 #include "expofuse.h"
 
@@ -78,6 +79,8 @@ int main(int argc, char* argv[])
 	forn(k,n_samples)
 		color_images[k] = LoadColorImage(argv[1+extra_parameters+k], 0);
 	
+	clock_t start = clock();
+	
 	printf("Generating weights with\n - contrast weight: %f\n - saturation weight %f\n - exposeness weight %f\n", contrast_weight, saturation_weight, exposeness_weight);
 	
 	weights = ConstructWeights(color_images, n_samples, contrast_weight, saturation_weight, exposeness_weight, SIGMA2);
@@ -91,6 +94,10 @@ int main(int argc, char* argv[])
 
 	fused_image = Fusion(color_images,weights,n_samples);
 	TruncateColorImage(fused_image);
+	
+	clock_t end = clock();
+	double elapsed = ((double) (end - start)) / CLOCKS_PER_SEC;
+	
 	SaveColorImage(fused_image,output_name);
 
 	// libero memoria
@@ -108,6 +115,8 @@ int main(int argc, char* argv[])
 	DeleteColorImage(naive_fused_image);
 */
 	DeleteColorImage(fused_image);
+	
+	printf("\nFusion took %.5f seconds\n", elapsed);
 
 	return 0;
 }

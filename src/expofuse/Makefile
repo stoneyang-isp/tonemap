@@ -4,6 +4,9 @@ GCC = gcc
 fuse: fuse.o cExpofuse.o asmExpofuse.o asmMatrix.o cMatrix.o
 	$(GCC) $^ -Wall -O0 -o $@ -lopencv_core -lopencv_imgproc -lopencv_highgui
 
+fuse_no_asm: fuse.o cExpofuse_no_asm.o cMatrix_no_asm.o
+	$(GCC) $^ -Wall -O0 -o $@ -lopencv_core -lopencv_imgproc -lopencv_highgui
+
 gui: gui.o cExpofuse.o asmExpofuse.o asmMatrix.o cMatrix.o
 	$(GCC) $^ -Wall -O3 -o $@ `pkg-config --cflags --libs gtk+-2.0` -lopencv_core -lopencv_imgproc -lopencv_highgui
 
@@ -20,11 +23,17 @@ fuse.o: fuse.c expofuse.h Matrix.h
 cExpofuse.o: expofuse.c Matrix.h asmExpofuse.o
 	$(GCC) -Wall -O0 -c $< -o $@ `pkg-config --cflags opencv`
 
+cExpofuse_no_asm.o: expofuse.c Matrix.h
+	$(GCC) -Wall -O0 -c $< -o $@ -D NO_ASM `pkg-config --cflags opencv`
+
 asmExpofuse.o: expofuse.asm
 	nasm -felf64 -o $@ $<
 
 cMatrix.o: Matrix.c Matrix.h
 	$(GCC) -O2 -Wall -c $< -o $@
+
+cMatrix_no_asm.o: Matrix.c Matrix.h
+	$(GCC) -O2 -Wall -c $< -o $@ -D NO_ASM
 
 asmMatrix.o: Matrix.asm
 	nasm -felf64 -O3 -o $@ $<
