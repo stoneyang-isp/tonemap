@@ -76,18 +76,18 @@ ColorImage* AddColorImage(const ColorImage* A, const ColorImage* B)
 	ColorImage* C;
 	C = NewColorImage();
 	
-	C->R = asmAddMatrix(A->R,B->R);
-	C->G = asmAddMatrix(A->G,B->G);
-	C->B = asmAddMatrix(A->B,B->B);
+	C->R = AddMatrix(A->R,B->R);
+	C->G = AddMatrix(A->G,B->G);
+	C->B = AddMatrix(A->B,B->B);
 	
 	return C;
 }
 
 ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B)
 {
-	asmAddEqualsMatrix(A->R,B->R);
-	asmAddEqualsMatrix(A->G,B->G);
-	asmAddEqualsMatrix(A->B,B->B);
+	AddEqualsMatrix(A->R,B->R);
+	AddEqualsMatrix(A->G,B->G);
+	AddEqualsMatrix(A->B,B->B);
 	
 	return A;
 }
@@ -150,7 +150,7 @@ Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
 		int odd_cols = current_level->cols - 2*downsampled->cols;
 		
 		aux = Upsample(downsampled,odd_rows,odd_cols);
-		pyramid[k] = asmSubstract(current_level, aux);
+		pyramid[k] = Substract(current_level, aux);
 		
 		// free some memory
 		DeleteMatrix(current_level);
@@ -245,23 +245,26 @@ void SaveColorImage(const ColorImage* I, const char* filename)
 
 void TruncateColorImage(ColorImage* I)
 {
-  int rows = I->R->rows;
-  int cols = I->R->cols;
-	_asmTruncate(I->R->data, rows, cols);
-	_asmTruncate(I->G->data, rows, cols);
-	_asmTruncate(I->B->data, rows, cols);
 	
-	/*int i, j;
-	forn(i,I->R->rows) forn(j,I->R->cols) {
-		if ( ELEM(I->R,i,j)<0 ) ELEM(I->R,i,j)=0;
-		if ( 1<ELEM(I->R,i,j) ) ELEM(I->R,i,j)=1;
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,I->R->rows) forn(j,I->R->cols) {
+		  if ( ELEM(I->R,i,j)<0 ) ELEM(I->R,i,j)=0;
+		  if ( 1<ELEM(I->R,i,j) ) ELEM(I->R,i,j)=1;
 		
-		if ( ELEM(I->G,i,j)<0 ) ELEM(I->G,i,j)=0;
-		if ( 1<ELEM(I->G,i,j) ) ELEM(I->G,i,j)=1;
+		  if ( ELEM(I->G,i,j)<0 ) ELEM(I->G,i,j)=0;
+		  if ( 1<ELEM(I->G,i,j) ) ELEM(I->G,i,j)=1;
 		
-		if ( ELEM(I->B,i,j)<0 ) ELEM(I->B,i,j)=0;
-		if ( 1<ELEM(I->B,i,j) ) ELEM(I->B,i,j)=1;
-	}*/
+		  if ( ELEM(I->B,i,j)<0 ) ELEM(I->B,i,j)=0;
+		  if ( 1<ELEM(I->B,i,j) ) ELEM(I->B,i,j)=1;
+	  }
+	#else
+    int rows = I->R->rows;
+    int cols = I->R->cols;
+	  _asmTruncate(I->R->data, rows, cols);
+	  _asmTruncate(I->G->data, rows, cols);
+	  _asmTruncate(I->B->data, rows, cols);
+	#endif
 }
 
 Matrix* DesaturateImage(const ColorImage* color_image)
@@ -270,14 +273,17 @@ Matrix* DesaturateImage(const ColorImage* color_image)
 
 	J = NewMatrix(color_image->R->rows,color_image->R->cols);
 	
-	_asmDesaturate(J->data, color_image->R->data, color_image->G->data, color_image->B->data, J->rows, J->cols);
-	/*int i, j;
-	forn(i,J->rows) forn(j,J->cols)
-		ELEM(J,i,j) = (
-			ELEM(color_image->R,i,j)*0.299 +
-			ELEM(color_image->G,i,j)*0.587 +
-			ELEM(color_image->B,i,j)*0.114
-		);*/
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,J->rows) forn(j,J->cols)
+		  ELEM(J,i,j) = (
+			  ELEM(color_image->R,i,j)*0.299 +
+			  ELEM(color_image->G,i,j)*0.587 +
+			  ELEM(color_image->B,i,j)*0.114
+		  );
+	#else
+  	_asmDesaturate(J->data, color_image->R->data, color_image->G->data, color_image->B->data, J->rows, J->cols);
+	#endif
 	
 	return J;
 }
@@ -288,10 +294,13 @@ Matrix* Contrast(const Matrix* I)
 	
 	J = Convolve(I, &LAPLACIAN_KERN_3x3, REPLICATE);
 	
-	_asmAbs(J->data, J->rows, J->cols);
-	/*int i, j;
-	forn(i,J->rows) forn(j,J->cols)
-		if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;*/
+  #ifdef NO_ASM
+	  int i, j;
+	  forn(i,J->rows) forn(j,J->cols)
+		  if (ELEM(J,i,j)<0) ELEM(J,i,j) *= -1;
+	#else
+	  _asmAbs(J->data, J->rows, J->cols);
+	#endif
 	
 	return J;
 }
@@ -308,21 +317,24 @@ Matrix* Saturation(const ColorImage* I)
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	_asmSaturation(J->data, I->R->data, I->G->data, I->B->data, J->rows, J->cols);
-	/*int i, j;
-	forn(i,J->rows) forn(j,J->cols) {
-		double r = ELEM(I->R,i,j);
-		double g = ELEM(I->G,i,j);
-		double b = ELEM(I->B,i,j);
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,J->rows) forn(j,J->cols) {
+		  double r = ELEM(I->R,i,j);
+		  double g = ELEM(I->G,i,j);
+		  double b = ELEM(I->B,i,j);
 		
-		// calculo la media (promedio)
-		double mu = (b+g+r)/3;
+		  // calculo la media (promedio)
+		  double mu = (b+g+r)/3;
 
-		// calculo el desvio standard
-		double sd = sqrt( ( pow(r-mu,2) + pow(g-mu,2) + pow(b-mu,2) ) / 3 );
+		  // calculo el desvio standard
+		  double sd = sqrt( ( pow(r-mu,2) + pow(g-mu,2) + pow(b-mu,2) ) / 3 );
 		
-		ELEM(J,i,j) = sd;
-	}*/
+		  ELEM(J,i,j) = sd;
+	  }
+	#else
+  	_asmSaturation(J->data, I->R->data, I->G->data, I->B->data, J->rows, J->cols);
+	#endif
 	
 	return J;
 }
@@ -334,15 +346,18 @@ Matrix* Exposeness(const ColorImage* I, double sigma)
 	
 	J = NewMatrix(I->R->rows,I->R->cols);
 	
-	_asmExposeness(J->data, I->R->data, I->R->data, I->R->data, J->rows, J->cols, sigma2);
-	/*int i, j;
-	forn(i,J->rows) forn(j,J->cols) {
-		double ex = 1.0;
-		ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / sigma2 );
-		ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / sigma2 );
-		ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / sigma2 );
-		ELEM(J,i,j) = ex;
-	}*/
+	#ifdef NO_ASM
+	  int i, j;
+	  forn(i,J->rows) forn(j,J->cols) {
+		  double ex = 1.0;
+		  ex *= exp( -.5*pow((ELEM(I->R,i,j))-.5, 2) / sigma2 );
+		  ex *= exp( -.5*pow((ELEM(I->G,i,j))-.5, 2) / sigma2 );
+		  ex *= exp( -.5*pow((ELEM(I->B,i,j))-.5, 2) / sigma2 );
+		  ELEM(J,i,j) = ex;
+	  }
+	#else
+  	_asmExposeness(J->data, I->R->data, I->R->data, I->R->data, J->rows, J->cols, sigma2);
+	#endif
 	
 	return J;
 }
@@ -367,7 +382,6 @@ void NormalizeWeights(Matrix** weights, const int n_samples)
 {
 	double expm12 = exp(-12);
 
-	// TODO: ASM
 	int i, j, k;
 	forn(i, weights[0]->rows) forn(j, weights[0]->cols) {
 		double sum = expm12;
@@ -384,7 +398,6 @@ void WeightColorImage(const ColorImage* color_image, const Matrix* weights)
 {
 	int i, j;
 	
-	// TODO: ASM
 	forn(i, weights->rows) forn(j, weights->cols) {
 		ELEM(color_image->R,i,j) *= ELEM(weights,i,j);
 		ELEM(color_image->G,i,j) *= ELEM(weights,i,j);
@@ -491,9 +504,9 @@ ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels)
 			DeleteColorImage(color_image);
 		color_image = NewColorImage();
 		
-		color_image->R = asmAddMatrix(pyramid[k]->R, aux_r);
-		color_image->G = asmAddMatrix(pyramid[k]->G, aux_g);
-		color_image->B = asmAddMatrix(pyramid[k]->B, aux_b);
+		color_image->R = AddMatrix(pyramid[k]->R, aux_r);
+		color_image->G = AddMatrix(pyramid[k]->G, aux_g);
+		color_image->B = AddMatrix(pyramid[k]->B, aux_b);
 		
 		DeleteMatrix(aux_r);
 		DeleteMatrix(aux_g);
