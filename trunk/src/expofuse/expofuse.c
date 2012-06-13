@@ -516,3 +516,23 @@ ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels)
 	return color_image;
 }
 
+void SaveMatrix(Matrix* I, char* filename) {
+	int i, j;
+	
+	IplImage* img;
+	img = cvCreateImage(cvSize(I->cols,I->rows), IPL_DEPTH_8U, 1);
+	
+	forn(i, I->rows) forn(j, I->cols) {
+		unsigned char* dst = (unsigned char*)(img->imageData + i*img->widthStep + j);
+		
+		if (ELEM(I,i,j) < 0) printf("WARNING: negative values present!\n");
+		if (1 < ELEM(I,i,j)) printf("WARNING: values greater than 1 present!\n");
+		
+		*dst = (unsigned char)(ELEM(I,i,j)*(ELEM(I,i,j)<0?0:1)*255.0);
+	}
+	
+	printf("saving image %s\n", filename);
+	if (!cvSaveImage(filename, img, 0)) printf("Could not save: %s\n",filename);
+
+	cvReleaseImage(&img);
+}
