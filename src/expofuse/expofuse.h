@@ -82,4 +82,6 @@ ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* I, const int levels);
 
 ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels);
 
+void SaveMatrix(Matrix* I, char* filename);
+
 #endif
