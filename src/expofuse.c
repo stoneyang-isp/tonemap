@@ -447,17 +447,34 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 	
 	forn(i,n_samples) {
 		// construyo piramide por cada imagen
-		Matrix** weight_gauss_pyramid = GaussianPyramid(weights[i],n_levels);
-		ColorImage** laplacian_image_pyramid = ColorLaplacianPyramid(color_images[i],n_levels);
+		Matrix** weight_gauss_pyramid = GaussianPyramid(weights[i], n_levels);
+		ColorImage** laplacian_image_pyramid = ColorLaplacianPyramid(color_images[i], n_levels);
+		
+		// Save Pyramids as Images
+    /*int c;
+    char filename[50];
+	  for(c = 0; c < n_samples; c++) {
+	    sprintf(filename, "gauss_sample%d_level%d.jpg", i, c);
+	    SaveMatrix(weight_gauss_pyramid[c], filename);
+	    sprintf(filename, "laplace_sample%d_level%d.jpg", i, c);
+	    SaveColorImage(laplacian_image_pyramid[c], filename);
+	  }*/
 		
 		// agrego cada nivel al resultado compuesto
 		forn(j, n_levels) {
-			WeightColorImage(laplacian_image_pyramid[j],weight_gauss_pyramid[j]);
+			WeightColorImage(laplacian_image_pyramid[j], weight_gauss_pyramid[j]);
 			if (i==0)
 				fused_pyramid[j] = CopyColorImage(laplacian_image_pyramid[j]);
 			else
-				AddEqualsColorImage(fused_pyramid[j],laplacian_image_pyramid[j]);
+				AddEqualsColorImage(fused_pyramid[j], laplacian_image_pyramid[j]);
 		}
+		// Save Pyramid as Images
+    int c;
+    char filename[50];
+	  for(c = 0; c < n_levels; c++) {
+	    sprintf(filename, "fused_pyramid_sample%d_level%d.jpg", i, c);
+	    SaveColorImage(fused_pyramid[c], filename);
+	  }
 		
 		// free some memory
 		forn(j,n_levels)
@@ -528,7 +545,7 @@ void SaveMatrix(Matrix* I, char* filename) {
 		if (ELEM(I,i,j) < 0) printf("WARNING: negative values present!\n");
 		if (1 < ELEM(I,i,j)) printf("WARNING: values greater than 1 present!\n");
 		
-		*dst = (unsigned char)(ELEM(I,i,j)*(ELEM(I,i,j)<0?0:1)*255.0);
+		*dst = (unsigned char)((ELEM(I,i,j)>1?1:ELEM(I,i,j))*(ELEM(I,i,j)<0?0:1)*255.0);
 	}
 	
 	printf("saving image %s\n", filename);

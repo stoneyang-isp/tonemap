@@ -85,10 +85,17 @@ int main(int argc, char* argv[])
 	
 	weights = ConstructWeights(color_images, n_samples, contrast_weight, saturation_weight, exposeness_weight, SIGMA2);
 	
-//	printf("Fusing the naive way\n");
+  // Save Weights as Image
+  /*int i;
+  char filename[50];
+	for(i = 0; i < n_samples; i++) {
+	  sprintf(filename, "weight_%d.jpg", i);
+	  SaveMatrix(weights[i], filename);
+	}*/
 	
-//	naive_fused_image = NaiveFusion(color_images,weights,n_samples);
-//	SaveColorImage(naive_fused_image,"fused_image_naive.jpg");
+  // printf("Fusing the naive way\n");
+  // naive_fused_image = NaiveFusion(color_images,weights,n_samples);
+  // SaveColorImage(naive_fused_image,"fused_image_naive.jpg");
 
 	printf("Fusing images with weights\n");
 
