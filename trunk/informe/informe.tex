@@ -166,6 +166,9 @@
             \texttt{ColorImage** ColorLaplacianPyramid(ColorImage* I, int levels)}
 
             \texttt{ColorImage* ReconstructFromPyramid(ColorImage** pyramid, int n\_levels)}
+            
+            \bigskip
+            Para las partes en Assembler, implementamos la convención de llamadas a funciones de C en x64 y creamos las funciones que nos interesaban. Usamos las extensiones SSE para la mejor performance, y implementamos casos específicos para optimizar las operaciones más demandantes.
 
     \section{Resultados}
 
@@ -180,9 +183,23 @@
         \includegraphics[width=\textwidth]{fused4.jpg}
 
     \section{Análisis de performance}
-
-    \section{Conclusiones}
     
+        A continuación mostrmos una tabla comparativa con los tiempos de ejecución del algoritmo implementado en Assembler y en C, para distinas imágenes de entrada. Se midió sólo el tiempo que tarda la ejecución del procesado, ignorando tiempos de cargado a memoria y guardado de imágenes.
+
+        \bigskip
+        \begin{tabular}{lll}
+        \textbf{Cantidad y tamaño} & \textbf{C} & \textbf{ASM}\\
+        4 $\times$ 752$\times$500 & 2.11s & 2.85s\\
+        3 $\times$ 870$\times$653 & 2.46s & 3.27s\\
+        3 $\times$ 1200$\times$800 & 4.15s & 5.54s\\
+        5 $\times$ 1500$\times$750 & 7.68s & 10.34s\\
+        3 $\times$ 3872$\times$2592 & 48.96s & 63.10s\\
+        \end{tabular}
+        \bigskip
+        
+        Se observa que en general la versión en Assembler tarda un 75\% del tiempo de la versión de C.
+
+    \newpage
     \section{Compilar y Correr}
     
         La implementación tiene como dependencias la librería \textsc{OpenCV} y \textsc{Nasm}, que pueden instalarse en ubuntu con:\\
