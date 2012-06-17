@@ -72,7 +72,99 @@
             Una pixel bien expuesto es aquel que no tiene una intensidad cercana al mínimo o al máximo (sobresaturada) del rango dinámico. Luego, definimos la calidad de la exposición como la distancia al valor óptimo $0.5$, siguiendo una curva gaussiana $exp(-\frac{(i-0.5)^2}{2\sigma^2})$, donde proponemos $\sigma = 0.2$ como en \cite{DBLP:conf/pg/MertensKR07}. En imágenes de color aplicamos esta función por cada canal y multiplicamos los resultados.
 
     \section{Implementación}
-    
+
+        La aplicación esta hecha para Linux de 64 bits (fue probado en distintas versiones de Ubuntu). El principal lenguaje de programación usado en la implementación fue C. Las operaciones de procesamiento de las imágenes fueron implementadas en ASM x64 para mejorar la performance, y se utilizó GTK para la interfaz gráfica. Para cargar y guardar imágenes se usa la librería OpenCV.
+        
+        Se abstrayeron las operaciones sobre matrices en el módulo \texttt{Matrix}, los algoritmos del Exposure Fusion están en \texttt{Expofuse}, y la interfaz gráfica en \texttt{Gui}. Los 3 módulos están implementados en C, y \texttt{Matrix} y \texttt{Expofuse} hacen llamadas a código en assembler en muchas de las funciones.
+        
+        \subsection{\texttt{Matrix}}
+            El tipo Matrix es una \texttt{struct} de este tipo:
+            
+            \begin{verbatim}
+            typedef struct {
+              int cols;
+              int rows;
+              double* data;
+            } Matrix;\end{verbatim}
+
+            y implementa las siguientes operaciones:
+            
+            \texttt{Matrix* NewMatrix(int rows, int cols)}
+            
+            \texttt{void DeleteMatrix(Matrix* A)}
+            
+            \texttt{Matrix* CopyMatrix(Matrix* A)}
+            
+            \texttt{Matrix* Substract(Matrix* A, Matrix* B)}
+            
+            \texttt{Matrix* AddMatrix(Matrix* A, Matrix* B)}
+            
+            \texttt{Matrix* AddEqualsMatrix(Matrix* A, Matrix* B)}
+            
+            \texttt{Matrix* Convolve(Matrix* A, Matrix* kernel, BOUNDARY)}
+            
+            \texttt{Matrix* Downsample(Matrix* I)}
+            
+            \texttt{Matrix* Upsample(Matrix* I, int odd\_rows, int odd\_cols)}
+            
+            \texttt{void ContrastCurve(Matrix* A, double strength)}
+        
+        \subsection{\texttt{Expofuse}}
+            Para representar imágenes y procesarlas usamos una \texttt{struct} de este tipo:
+            
+            \begin{verbatim}
+            typedef struct {
+              Matrix* R;
+              Matrix* G;
+              Matrix* B;
+            } ColorImage;\end{verbatim}
+            
+            con las funciones:
+            
+            \texttt{ColorImage* NewColorImage()}
+
+            \texttt{void DeleteColorImage(ColorImage* image)}
+
+            \texttt{ColorImage* CopyColorImage(ColorImage* image)}
+
+            \texttt{ColorImage* AddColorImage(ColorImage* A, ColorImage* B)}
+
+            \texttt{ColorImage* AddEqualsColorImage(ColorImage* A, ColorImage* B)}
+
+            \texttt{ColorImage* LoadColorImage(char* filename, int size)}
+
+            \texttt{void SaveColorImage(ColorImage* I, char* filename)}
+
+            \texttt{void TruncateColorImage(ColorImage* I)}
+
+            \texttt{void SContrast(ColorImage* A, double strength)}
+            
+            \bigskip
+            y para implenetar Exposure Fusion se tienen las funciones:
+            
+            \texttt{Matrix** ConstructWeights(ColorImage** color\_images, int n\_samples, double contrast\_weight, double saturation\_weight, double exposeness\_weight, double sigma)}
+            
+            \texttt{Matrix* Contrast(Matrix* I)}
+
+            \texttt{Matrix* Saturation(ColorImage* I)}
+
+            \texttt{Matrix* Exposeness(ColorImage* I, double sigma)}
+
+            \texttt{Matrix* Weight(Matrix* contrast, double contrast\_weight, Matrix* saturation, double saturation\_weight, Matrix* exposeness, double exposeness\_weight)}
+
+            \texttt{void NormalizeWeights(Matrix** weights, int n\_samples)}
+
+            \texttt{void WeightColorImage(ColorImage* color\_image, Matrix* weights)}
+
+            \texttt{ColorImage* Fusion(ColorImage** images, Matrix** weights, int n\_samples)}
+
+            \texttt{Matrix** GaussianPyramid(Matrix* I, int levels)}
+
+            \texttt{Matrix** LaplacianPyramid(Matrix* I, int levels)}
+
+            \texttt{ColorImage** ColorLaplacianPyramid(ColorImage* I, int levels)}
+
+            \texttt{ColorImage* ReconstructFromPyramid(ColorImage** pyramid, int n\_levels)}
 
     \section{Resultados}
 
@@ -81,6 +173,9 @@
     \section{Conclusiones}
     
     \section{Compilar y Correr}
+    
+        La implementación tiene como dependencias la librería \textsc{OpenCV} y \textsc{Nasm}, que pueden instalarse en ubuntu con:\\
+        \texttt{sudo apt-get install libcv-dev libhighgui-dev nasm}.
 
     \appendix
 
