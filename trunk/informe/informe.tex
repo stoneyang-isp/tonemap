@@ -22,55 +22,66 @@
     \maketitle
 
     \begin{abstract}
-        Una cámara captura la intensidad de la luminosidad en cada punto de una imagen. El rango de estas intensidades varía según la \emph{exposición} de la cámara (que se controla con la apertura, tiempo de exposición y sensibilidad), pero el tamaño del rango de luminosidades -\emph{rango dinámico}- es acotado. Es decir, se saturan las intensidades para valores fuera de ese rango, perdiendo detalle en esas zonas (partes quemadas -blancas- y oscuras -negras-).
-        
-        Es posible capturar el rango dinámico completo de una imagen con múltiples fotos con distintas exposiciones y fusionandolas. El objetivo de este trabajo es fusionarlas de manera de producir otra imagen de rango dinámico acotado de la mejor forma posible, ya que los medios para reproducir fotos también son de rango acotado (monitores, impresión).
-        
-        Se presenta una implementación del algoritmo de Exposure Fusion \cite{DBLP:conf/pg/MertensKR07} en assembler x64 usando SIMD Extensions.
+        Una cámara captura la intensidad de la luminosidad en cada punto de una imagen. El rango de estas intensidades varía según la \emph{exposición} de la cámara (controlada por los niveles de apertura, tiempo de exposición y sensibilidad), pero el rango de luminosidad -\emph{rango dinámico}- que el sensor o la película de la cámara sabe captar, es acotado. En consecuencia, se saturan las intensidades para valores fuera de ese rango, perdiendose detalle en estas zonas (partes quemadas -blancas- y oscuras -negras-).
 
+        Es posible capturar el rango dinámico completo de una imagen tomando múltiples fotos bajo distintas exposiciones y fusionando luego esta información en imágenes de alto rango dinámico (HDR). El siguiente problema que surge, es la visualización de esta gran cantidad de información, ya que los medios que existen para reproducir las imágenes (monitores, impresión), cuentan a su vez con un rango lumínico muy acotado. De aquí la motivación para comprimir la información de manera de conservar la mayor cantidad de detalle y calidad posibles en una imágen de bajo randgo dinámico (LDR).
+
+        Construír la imágen HDR tiene un costo computacional alto, y necesita de gran intervención y toma de decisiones por parte del usuario para elegir/combinar algoritmos de fusión y determinar sus parámetros. El objetivo de este trabajo es fusionar dicha información sin computar una imágen HDR, automatizando el proceso bajo un algoritmo de estimación de calidad de las partes de una imágen, reduciendo el costo computacional y la intervención por parte del usuario.
+
+        Para esto presentamos una implementación del algoritmo de Exposure Fusion \cite{DBLP:conf/pg/MertensKR07} en assembler x64 usando SIMD Extensions.
     \end{abstract}
 
     \section{Introducción}
 
-        El rango dinámico del ojo humano es dificil de calcular, pero bajo condiciones parecidas a las de un sistema de fotografía, está estimado entre 10 a 14 \emph{f-stops}. Vemos la gran diferencia que hay entre un sensor digital y el ojo humano, por lo que reproducir adecuadamente lo que ve un ojo es imposible bajo condiciones de mucho rango dinámico, considerando que un día soleado con reflectividad dispareja tiene un rango de 12+ \emph{f-stops}.
+        El rango dinámico del ojo humano es dificil de calcular, pero bajo condiciones parecidas a las de un sistema de fotografía, es mucho mayor que este último, por lo que captar adecuadamente en una imágen lo que ve un ojo humano es imposible bajo condiciones de mucho rango dinámico.
 
-        Las imágenes HDR (High Dynamic Range) son imágenes que tienen un rango dinámico mucho más grande, y por lo tanto resultan más representativas y mas detalladas que las imágenes comunes. HDRI (HDR Imaging) son métodos utilizados para crear imágenes HDR combinando la información de varias imágenes de la misma escena con menor rango dinámico bajo distintas exposiciones.
+        Las imágenes HDR (High Dynamic Range) son imágenes que tienen un rango dinámico mucho más grande, y por lo tanto resultan más representativas y mas detalladas que las imágenes comunes. HDRI (HDR Imaging) son métodos utilizados para crear imágenes HDR combinando la información de varias imágenes de la misma escena con bajo rango dinámico bajo distintas exposiciones.
 
-        Sin embargo, las imágenes HDR no son apropiadas para mostrar en monitores o imprimir, ya que el rango dinámico de estos medios también es acotado y son aptos para ver sólo imágenes con bajo rango dinámico. Una opción, entonces, es volver a \textbf{comprimir una imagen HDR a un rango dinámico acotado, mostrando la mayor cantidad de detalle en cada zona y manteniendo la estética y realismo de la misma}. Hay distintos algoritmos que logran esto con distintos resultados, se llaman algoritmos de \emph{Tone Mapping}.
+        Sin embargo, las imágenes HDR no son apropiadas para mostrar en monitores o imprimir, ya que el rango dinámico de estos medios también es acotado y son aptos para ver sólo imágenes con bajo rango dinámico. Una opción, entonces, es volver a \textbf{comprimir una imagen HDR a un rango dinámico bajo, mostrando la mayor cantidad de detalle en cada zona y manteniendo la estética y realismo de la misma}. Hay distintos algoritmos que logran esto con distintos resultados, se llaman algoritmos de \emph{Tone Mapping}.
 
         Exposure Fusion \cite{DBLP:conf/pg/MertensKR07} es una técnica desarrollada para fusionar varias imágenes de bajo rango dinámico tomadas a distintas exposiciones  con un resultado similar a los operadores de tone mapping de HDR. Esta técnica evita pasos como la creación de la imagen HDR, la calibración de la curva de respuesta de la cámara y la selección de operadores de tone mapping, pasos que son costosos computacionalmente e implican una calibración ''a ojo'' de los parámetros.
-        
+
         Exposure fusion analiza ciertas propiedades de las imágenes que son relevantes para la calidad de la foto, y por cada pixel de la imagen se queda con la ''mejor'' información que puede recuperar a partir de todas las imágenes originales. Estas propiedades son el contraste, la saturación y la calidad de exposición de un pixel. El resultado final es computado automáticamente. A diferencia de otros algoritmos de tone-mapping, no requiere la creación de la imagen HDR sino que directamente combina las distintas exposiciones. Gracias a esto es más robusto, más rapido, y permite por ejemplo mezclar tomas con y sin flash.
 
     \section{Algoritmo}
 
-        Cada pixel de la imagen final se obtiene como la suma ponderada de los valores de ese pixel en las imágenes de entrada. El peso que se le asigna a cada muestra es la medida de la calidad de ese pixel en esa imagen. En resumen:
+        Cada pixel de la imagen final se obtiene como la suma ponderada de los valores de ese pixel en las imágenes de entrada. El peso que se le asigna a cada muestra es la medida de la calidad de ese pixel en esa imagen:
 
         $$ R_{i,j} = \sum_{k=1}^N{ \hat{W}_{k_{i,j}}*I_{k_{i,j}} } $$
 
         Donde $N$ es la cantidad de imágenes a fusionar, $I_k$ son esas imágenes, $\hat{W}_{k_{i,j}}$ es el peso del pixels $I_{k_{i,j}}$ y $R_{i,j}$ es la imagen resultante.
 
-        Para calcular los pesos $\hat{W}_{k,i,j}$, primero calculamos la calidad de cada pixel en función de las tres propiedades descriptas anteriormente
+        Para calcular los pesos $\hat{W}_{k_{i,j}}$, primero estimamos la calidad de cada pixel en función de tres propiedades, \emph{Contraste}, \emph{Saturación} y \emph{Exposición}:
 
         $$ W_{k_{i,j}} = (C_{k_{i,j}})^{w_C} \times (S_{k_{i,j}})^{w_S} \times (E_{k_{i,j}})^{w_E} $$
 
-        donde $w_C$, $w_S$ y $w_E$ son parámetros que regulan cuanta importancia le queremos dar a cada métrica, y luego normalizamos los pesos de las matrices $W_{k_{i,j}}$ para que el resultado sume 1 en cada pixel, y el resultado tenga el mismo depth bit que las imágenes originales.
+        donde $w_C$, $w_S$ y $w_E$ son parámetros que regulan cuanta importancia le asignamos a cada métrica, y luego normalizamos los pesos de las matrices $W_{k_{i,j}}$ para que el resultado sume 1 en cada pixel, y el resultado tenga el mismo depth bit que las imágenes originales.
 
         $$ \hat{W}_{k_{i,j}} = W_{k_{i,j}} \times [\sum_{k'=1}^N{W_{k'_{i,j}}}]^{-1} $$ 
 
-        Nos falta entonces calcular las matrices de calidad respectivas a cada propiedad.
+        Queda entonces calcular las matrices de los estimadores de calidad.
 
         \subsection{Contraste}
 
             Aplicamos un filtro laplaciano a la versión en escala de grises de cada imagen y nos quedamos con el valor absoluto de la respuesta. Esto suele asignar pesos altos a elementos que pertenecen a bordes o texturas en la imagen.
 
+            $$C_k = laplaciano(I_k)$$
+
         \subsection{Saturación}
 
-            Una medida importante de la calidad de la imágen es la saturación. Buscamos colores vívidos, que son los que tienen más diferencia entre los colores que lo componen. Se calcula como la desviación estandar del componente rojo, verde y azul. ($\frac{\sqrt{(r-\mu)^2 + (g-\mu)^2 + (b-\mu)^2}}{3}$, $\mu = \frac{b+g+r}{3}$).
+            Una medida importante de la calidad de la imágen es la saturación. Buscamos colores vívidos, que son los que tienen más diferencia entre los colores que lo componen, aquellos que se encuentran mas lejos de los grises. Se calcula como el desvío estándar para cada píxel de los componentes rojo, verde y azul, contra el valor esperado en la escala de grises:
+
+            $$ S_{k_{i,j}} = \frac{\sqrt{(r-\mu)^2 + (g-\mu)^2 + (b-\mu)^2}}{3} $$
+            
+            Donde $r$, $g$ y $b$ son los valores de los canales rojo, verde y azul del píxel $I_{k_{i,j}}$ respectivamente, y el valor esperado $\mu = \frac{b+g+r}{3}$.
 
         \subsection{Exposición}
 
-            Una pixel bien expuesto es aquel que no tiene una intensidad cercana al mínimo o al máximo (sobresaturada) del rango dinámico. Luego, definimos la calidad de la exposición como la distancia al valor óptimo $0.5$, siguiendo una curva gaussiana $exp(-\frac{(i-0.5)^2}{2\sigma^2})$, donde proponemos $\sigma = 0.2$ como en \cite{DBLP:conf/pg/MertensKR07}. En imágenes de color aplicamos esta función por cada canal y multiplicamos los resultados.
+            Un pixel bien expuesto es aquel que no tiene una intensidad cercana al mínimo o al máximo (sobresaturada) del rango dinámico en sus canales. Luego, definimos la calidad de la exposición como la distancia al valor óptimo $0.5$ en cada canal, respecto de una curva gaussiana
+            
+            $$ E_{k_{i,j}} = \prod_{i=\{r,g,b\}}{exp(-\frac{(i-0.5)^2}{2\sigma^2})}$$
+            
+            Donde $r$, $g$ y $b$ son los valores de los canales rojo, verde y azul del píxel $I_{k_{i,j}}$ respectivamente, y proponemos $\sigma = 0.2$ como en \cite{DBLP:conf/pg/MertensKR07}.
 
     \section{Implementación}
 
@@ -238,7 +249,7 @@
 
     \section{Rango dinámico}
 
-        El rango dinámico en una cámara de fotos, se define como la razón entre el nivel de blanco más alto que puede detectar un sensor y el nivel más bajo. Los sensores de cámaras digitales en blanco y negro, consisten de una grilla de fotositos, que se pueden ver como un recipiente con capacidad para cierta cantidad de fotones. Luego de la exposición, se mide la cantidad de fotones que se encuentran en cada fotosito, y eso nos da el valor lumínico de cada pixel. Si nuestro recipiente se llena, decimos que el pixel esta saturado y va a detectar como valores iguales a todos los que esten por encima del máximo, luego, estamos perdiendo detalle en las zonas claras. Si disminuímos la exposición de la imagen para contrarrestar la saturación, estamos dividiendo la cantidad de fotones que inciden en un recipiente por algun factor, con lo cuál los valores que se encuentran en las zonas oscuras son cada vez más parecidos, y son mas indistinguibles del ruido electrónico generado al leer el valor, por lo que perdemos detalle en las zonas oscuras. Claramente el rango dinámico depende del tamaño de estos recipientes, por ejemplo las cámaras compactas, comparadas por ejemplo con SLR's profesionales, al ser mas chicas deben reducir el tamaño del sensor y por lo tanto el de los fotositos, disminuyendo así el rango dinámico. El rango dinámicos se mide con distintas unidades, de las cuáles la mas común es el f-stop, que describe el rango en potencias de 2, por ejemplo el rango $1024:1 = 1024 = 2^{10} f-stops$.
+        El rango dinámico en una cámara de fotos, se define como la razón entre el nivel de blanco más alto que puede detectar un sensor y el nivel más bajo. Los sensores de cámaras digitales en blanco y negro, consisten de una grilla de fotositos, que se pueden ver como un recipiente con capacidad para cierta cantidad de fotones. Luego de la exposición, se mide la cantidad de fotones que se encuentran en cada fotosito, y eso nos da el valor lumínico de cada pixel. Si nuestro recipiente se llena, decimos que el pixel esta saturado y va a detectar como valores iguales a todos los que esten por encima del máximo, luego, estamos perdiendo detalle en las zonas claras. Si disminuímos el tiempo de exposición de la imagen para contrarrestar la saturación, estamos dividiendo la cantidad de fotones que inciden en un recipiente por algun factor, con lo cuál los valores que se encuentran en las zonas oscuras son cada vez más parecidos, y son mas indistinguibles del ruido electrónico generado al leer el valor, por lo que perdemos detalle en las zonas oscuras. Claramente el rango dinámico depende del tamaño de estos recipientes, por ejemplo las cámaras compactas, comparadas por ejemplo con SLR's profesionales, al ser mas chicas deben reducir el tamaño del sensor y por lo tanto el de los fotositos, disminuyendo así el rango dinámico. El rango dinámico se mide con distintas unidades, de las cuáles la mas común es el f-stop, una escala logarítmica que describe el rango en potencias de 2, por ejemplo el rango (razón de contraste, o valor-máximo/valor-mínimo de luminosidad) de 1024 valores $1024:1 = 1024 = 2^{10} f-stops$.
         En imágenes a color, simplemente tenemos 4 fotositos por pixel, donde cada uno detecta análogamente solamente en un rango de frecuencias cerca de rojo, verde o azul. 
 
     \bibliographystyle{plain}
