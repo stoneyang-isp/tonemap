@@ -1,5 +1,6 @@
 GCC = gcc
 
+all: fuse gui
 
 fuse: fuse.o cExpofuse.o asmExpofuse.o asmMatrix.o cMatrix.o
 	$(GCC) $^ -Wall -O0 -o $@ -lopencv_core -lopencv_imgproc -lopencv_highgui

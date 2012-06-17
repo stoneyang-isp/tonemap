@@ -4,6 +4,7 @@
 
 \usepackage{color}
 \usepackage{amsmath}
+\usepackage{graphicx}
 
 \newcommand{\abs}[1]{\lvert#1\rvert}
 \newcommand{\norm}[1]{\lVert#1\rVert}
@@ -168,6 +169,16 @@
 
     \section{Resultados}
 
+        Tal como los resultados de Mertens, Kautz y Van Reeth, obtuvimos imágenes con mucho nivel de detalle en condiciones de mucho contraste y alto rango de luminosidad, que son estéticas y muy realistas. A continuación mostramos algunos resultados con las imágenes de entrada y la composición final.
+        
+        \includegraphics[width=\textwidth]{fused1.jpg}
+        
+        \includegraphics[width=\textwidth]{fused2.jpg}
+        
+        \includegraphics[width=\textwidth]{fused3.jpg}
+        
+        \includegraphics[width=\textwidth]{fused4.jpg}
+
     \section{Análisis de performance}
 
     \section{Conclusiones}
@@ -176,6 +187,35 @@
     
         La implementación tiene como dependencias la librería \textsc{OpenCV} y \textsc{Nasm}, que pueden instalarse en ubuntu con:\\
         \texttt{sudo apt-get install libcv-dev libhighgui-dev nasm}.
+        
+        Para compilar el proyecto, hay que correr \texttt{make} desde \texttt{/src}.\\
+        \texttt{cd /src}\\
+        \texttt{make}
+        
+        Si compila correctamente se puede correr el programa.
+        \begin{itemize}
+        \item Por consola, ejemplo:\\
+          \texttt{./fuse -o room.jpg room/\{A,B,C,D\}.jpg}\\
+          Corre el algoritmo con las imágenes \texttt{A.jpg}, \texttt{B.jpg}, \texttt{C.jpg}, \texttt{D.jpg} de \texttt{src/room/}.\\
+          \texttt{./fuse -h}\\
+          Para más información y detalle de los parámetros.
+        \item Con la interfaz gráfica:\\
+          \texttt{./gui}\\
+          Inicia la interfaz gráfica donde se deben seleccionar las imágenes (seleccionar múltiples imágenes previamente alineadas y de las mismas dimensiones con \textsc{Ctrl}) y luego se pueden ajustar los parámetros y exportar la imagen final.
+        \end{itemize}
+        
+        \subsection{Opcional: Alinear imágenes antes de fusionar}
+            Para que el algoritmo funcione con los resultados esperados, las imágenes de entrada tienen que estar perfectamente alineadas.
+            En general se obtienen las fotos con un trípode, variando la exposición de cada toma, pero sin mover la cámara.
+            
+            Pero también se pueden obtener las imágenes a mano alzada y luego alinearlas con un software. En este ejemplo mostramos cómo usar \texttt{align\_image\_stack} de \textsc{Hugin}.
+            
+            Primero, instalar las herramientas de \textsc{Hugin}:\\
+            \texttt{sudo apt-get install hugin-tools}
+            
+            Luego, se pueden alinear las imágenes de la siguiente forma:\\
+            \texttt{align\_image\_stack A.jpg B.jpg C.jpg D.jpg -a alineadas}\\
+            Esto genera las imágenes alineadasXXXX.tif, que pueden ser usadas en la interfaz gráfica o por consola.
 
     \appendix
 
