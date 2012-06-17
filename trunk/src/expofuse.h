@@ -33,13 +33,13 @@ void DeleteColorImage(ColorImage* image);
 
 ColorImage* CopyColorImage(const ColorImage* image);
 
-Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples, double contrast_weight, double saturation_weight, double exposeness_weight, double sigma);
+Matrix** ConstructWeights(/*const*/ ColorImage** color_images, int n_samples, double contrast_weight, double saturation_weight, double exposeness_weight, double sigma);
 
 ColorImage* AddColorImage(const ColorImage* A, const ColorImage* B);
 
 ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B);
 
-ColorImage* LoadColorImage(const char* filename, const int size);
+ColorImage* LoadColorImage(const char* filename, int size);
 
 void SaveColorImage(const ColorImage* I, const char* filename);
 
@@ -66,21 +66,21 @@ extern void _asmExposeness(double* A, const double* R, const double* G, const do
 
 Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* saturation, double saturation_weight, const Matrix* exposeness, double exposeness_weight);
 
-void NormalizeWeights(Matrix** weights, const int n_samples);
+void NormalizeWeights(Matrix** weights, int n_samples);
 
 void WeightColorImage(const ColorImage* color_image, const Matrix* weights);
 
-ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples);
+ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, int n_samples);
 
-ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples);
+ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, int n_samples);
 
-Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels);
+Matrix** GaussianPyramid(/*const*/ Matrix* I, int levels);
 
-Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels);
+Matrix** LaplacianPyramid(/*const*/ Matrix* I, int levels);
 
-ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* I, const int levels);
+ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* I, int levels);
 
-ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels);
+ColorImage* ReconstructFromPyramid(ColorImage** pyramid, int n_levels);
 
 void SaveMatrix(Matrix* I, char* filename);
 

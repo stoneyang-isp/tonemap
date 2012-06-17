@@ -178,7 +178,7 @@ Matrix* Downsample(const Matrix* I) {
 	return downsampled;
 }
 
-Matrix* Upsample(const Matrix* I, const int odd_rows, int odd_cols)
+Matrix* Upsample(const Matrix* I, int odd_rows, int odd_cols)
 {
 	Matrix* aux;
 	Matrix* upsampled;

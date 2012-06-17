@@ -22,7 +22,7 @@ ColorImage* CopyColorImage(const ColorImage* image)
 	return copy;
 }
 
-Matrix** ConstructWeights(/*const*/ ColorImage** color_images, const int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight, double sigma)
+Matrix** ConstructWeights(/*const*/ ColorImage** color_images, int n_samples,  double contrast_weight,  double saturation_weight,  double exposeness_weight, double sigma)
 {
 	Matrix** grey_images;
 	Matrix** contrast;
@@ -92,7 +92,7 @@ ColorImage* AddEqualsColorImage(ColorImage* A, const ColorImage* B)
 	return A;
 }
 
-Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels) {
+Matrix** GaussianPyramid(/*const*/ Matrix* I, int levels) {
 	int k;
 	Matrix** pyramid;
 	
@@ -109,7 +109,7 @@ Matrix** GaussianPyramid(/*const*/ Matrix* I, const int levels) {
 	return pyramid;
 }
 
-ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* color_image, const int n_levels)
+ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* color_image, int n_levels)
 {
 	int k;
 	Matrix** R_pyramid;
@@ -132,7 +132,7 @@ ColorImage** ColorLaplacianPyramid(/*const*/ ColorImage* color_image, const int 
 	return pyramid;
 }
 
-Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
+Matrix** LaplacianPyramid(/*const*/ Matrix* I, int levels)
 {
 	int k;
 	Matrix* current_level;
@@ -164,7 +164,7 @@ Matrix** LaplacianPyramid(/*const*/ Matrix* I, const int levels)
 	return pyramid;
 }
 
-ColorImage* LoadColorImage(const char* filename, const int size)
+ColorImage* LoadColorImage(const char* filename, int size)
 {
 	int i, j;
 	IplImage* img;
@@ -378,7 +378,7 @@ Matrix* Weight(const Matrix* contrast, double contrast_weight, const Matrix* sat
 	return J;
 }
 
-void NormalizeWeights(Matrix** weights, const int n_samples)
+void NormalizeWeights(Matrix** weights, int n_samples)
 {
 	double expm12 = exp(-12);
 
@@ -405,7 +405,7 @@ void WeightColorImage(const ColorImage* color_image, const Matrix* weights)
 	}
 }
 
-ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples)
+ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, int n_samples)
 {
 	int i, j, k, rows, cols;
 	Matrix* R; Matrix* G; Matrix* B;
@@ -435,7 +435,7 @@ ColorImage* NaiveFusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** 
 	return fusioned_image;
 }
 
-ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, const int n_samples)
+ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weights, int n_samples)
 {
 	int i, j, n_levels;
 	ColorImage* aux;
@@ -469,12 +469,12 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 				AddEqualsColorImage(fused_pyramid[j], laplacian_image_pyramid[j]);
 		}
 		// Save Pyramid as Images
-    int c;
+    /*int c;
     char filename[50];
 	  for(c = 0; c < n_levels; c++) {
 	    sprintf(filename, "fused_pyramid_sample%d_level%d.jpg", i, c);
 	    SaveColorImage(fused_pyramid[c], filename);
-	  }
+	  }*/
 		
 		// free some memory
 		forn(j,n_levels)
@@ -497,7 +497,7 @@ ColorImage* Fusion(/*const*/ ColorImage** color_images, /*const*/ Matrix** weigh
 	return aux;
 }
 
-ColorImage* ReconstructFromPyramid(ColorImage** pyramid, const int n_levels)
+ColorImage* ReconstructFromPyramid(ColorImage** pyramid, int n_levels)
 {
 	int k;
 	Matrix* aux_r;
